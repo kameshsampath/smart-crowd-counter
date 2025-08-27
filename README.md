@@ -60,12 +60,68 @@ Perfect for live demos showcasing AI capabilities in real-world scenarios!
    );
    ```
 
-2. **Deploy to Snowflake**
+2. **Create Core AI View** ⭐ 
+   ```sql
+   -- This is the heart of the app - AI-powered image analysis
+   CREATE OR REPLACE VIEW SMART_CROWD_COUNTER AS 
+   WITH image_files AS (
+       SELECT 
+           relative_path as name,
+           TO_FILE('@kamesh_demos.conferences.snaps',relative_path) as file,
+           last_modified AS last_modified
+       FROM DIRECTORY('@kamesh_demos.conferences.snaps')
+       WHERE relative_path LIKE '%.jpg' OR relative_path LIKE '%.jpeg'
+   ),
+   processed_images AS (
+       SELECT 
+           name,
+           file,
+           last_modified,
+           AI_COMPLETE(
+               'claude-4-sonnet',
+              'Analyze image: count people and raised hands. Return JSON only: {"total_attendees": N, "raised_hands": N, "percentage_with_hands_up": N.NN}. Calculate percentage as (raised_hands/attendees)*100, round to 2 decimals.',file
+           ) AS attendees_count
+       FROM image_files
+   )
+   SELECT 
+       name,
+       file as file_name,
+       AI_COMPLETE('claude-4-sonnet',PROMPT('# Conference Photo Caption Generator Prompt
+   
+   Create a concise, descriptive caption for a conference/workshop photo with the filename: `{0}`
+   
+   ## Context clues from filename:
+   - **NS** = Northstar
+   - **SWT** = Snowflake World Tour  
+   - **Location abbreviations** (e.g., PUNE, DELHI, MEL for Melbourne)
+   - **Numbers** likely indicate session sequence or day
+   
+   ## Caption requirements:
+   - Keep it simple and descriptive
+   - Format: *Event Name + Location + Session Type/Number*
+   - Use italics for styling
+   - No hashtags or additional text
+   - **Add "Workshop" if you see attendees with laptops or materials in front of them (hands-on learning environment)**
+   - Focus on identifying the event, location, and session clearly
+   
+   ## Example format:
+   *[Event Name] [City] [Session Type/Number]*
+   
+   **Generate a clean, minimal caption that clearly identifies the event and session.**',name)) as caption,
+       attendees_count as raw,
+       PARSE_JSON(attendees_count):total_attendees AS total_attendees,
+       PARSE_JSON(attendees_count):raised_hands AS raised_hands,  
+       PARSE_JSON(attendees_count):percentage_with_hands_up AS percentage_with_hands_up
+   FROM processed_images
+   ORDER BY name;
+   ```
+
+3. **Deploy to Snowflake**
    - Upload the Python file to your Snowflake environment
    - Create a Streamlit app using Snowflake's native Streamlit support
    - Configure database and schema connections
 
-3. **Configure Environment**
+4. **Configure Environment**
    - Update database and schema names in the code if different
    - Ensure proper permissions for file uploads and stage access
 
@@ -104,6 +160,14 @@ Perfect for live demos showcasing AI capabilities in real-world scenarios!
 - **Snowflake** for the powerful Cortex AISQL platform
 - **Streamlit** for the intuitive app development framework
 - **Community** for inspiration and feedback
+
+## 📞 Support
+
+For questions or issues:
+- Open a GitHub issue
+- Check Snowflake documentation for AISQL specifics
+- Review Streamlit docs for UI customization
+
 ---
 
 **⭐ Star this repo if it helped you build something cool!**
