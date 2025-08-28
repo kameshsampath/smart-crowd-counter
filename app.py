@@ -50,7 +50,7 @@ __model_name = 'claude-4-sonnet'
 
 # Function to refresh data from table
 def refresh_data():
-    __sql = "select * from kamesh_demos.conferences.attendee_tracker"
+    __sql = "select * from kamesh_demos.conferences.smart_crowd_counter"
     return session.sql(__sql).to_pandas()
 
 def get_image_url_from_stage(file_json_str):
