@@ -51,11 +51,11 @@ Perfect for live demos showcasing AI capabilities in real-world scenarios!
    DIRECTORY = (ENABLE = true, AUTO_REFRESH = true);
    
    -- Create Git Integration the repo or its fork
-  CREATE OR REPLACE API INTEGRATION kameshsampath_github
-   API_PROVIDER = git_https_api
-   API_ALLOWED_PREFIXES = ('https://github.com/kameshsampath')
+   CREATE OR REPLACE API INTEGRATION kameshsampath_github
+     API_PROVIDER = git_https_api
+     API_ALLOWED_PREFIXES = ('https://github.com/kameshsampath')
    ENABLED = TRUE;
-   ```
+  ```
 
 2. **Create Core AI View** ⭐ 
    ```sql
