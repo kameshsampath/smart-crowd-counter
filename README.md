@@ -50,14 +50,11 @@ Perfect for live demos showcasing AI capabilities in real-world scenarios!
    ENCRYPTION = (TYPE = 'SNOWFLAKE_SSE')
    DIRECTORY = (ENABLE = true, AUTO_REFRESH = true);
    
-   -- Create table for attendee tracking results
-   CREATE TABLE IF NOT EXISTS KAMESH_DEMOS.CONFERENCES.ATTENDEE_TRACKER (
-       FILE_NAME VARIANT,
-       TOTAL_ATTENDEES NUMBER,
-       RAISED_HANDS NUMBER,
-       PERCENTAGE_WITH_HANDS_UP FLOAT,
-       RAW VARIANT
-   );
+   -- Create Git Integration the repo or its fork
+  CREATE OR REPLACE API INTEGRATION kameshsampath_github
+   API_PROVIDER = git_https_api
+   API_ALLOWED_PREFIXES = ('https://github.com/kameshsampath')
+   ENABLED = TRUE;
    ```
 
 2. **Create Core AI View** ⭐ 
