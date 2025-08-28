@@ -40,24 +40,27 @@ Perfect for live demos showcasing AI capabilities in real-world scenarios!
 ## ⚙️ Setup
 
 1. **Create Snowflake Objects**
+   
    ```sql
-   -- Create database and schema
-   CREATE DATABASE IF NOT EXISTS KAMESH_DEMOS;
-   CREATE SCHEMA IF NOT EXISTS KAMESH_DEMOS.CONFERENCES;
-   
-   -- Create stage for image uploads
-   CREATE STAGE IF NOT EXISTS KAMESH_DEMOS.CONFERENCES.SNAPS
-   ENCRYPTION = (TYPE = 'SNOWFLAKE_SSE')
-   DIRECTORY = (ENABLE = true, AUTO_REFRESH = true);
-   
-   -- Create Git Integration the repo or its fork
-   CREATE OR REPLACE API INTEGRATION kameshsampath_github
-     API_PROVIDER = git_https_api
-     API_ALLOWED_PREFIXES = ('https://github.com/kameshsampath')
-   ENABLED = TRUE;
-  ```
+    -- Create database and schema
+    CREATE DATABASE IF NOT EXISTS KAMESH_DEMOS;
+    CREATE SCHEMA IF NOT EXISTS KAMESH_DEMOS.CONFERENCES;
+    
+    -- Create stage for image uploads
+    CREATE STAGE IF NOT EXISTS KAMESH_DEMOS.CONFERENCES.SNAPS
+    ENCRYPTION = (TYPE = 'SNOWFLAKE_SSE')
+    DIRECTORY = (ENABLE = true, AUTO_REFRESH = true);
+    
+    -- Create Git Integration the repo or its fork
+    CREATE OR REPLACE API INTEGRATION kameshsampath_github
+        API_PROVIDER = git_https_api
+        API_ALLOWED_PREFIXES = ('https://github.com/kameshsampath')
+    ENABLED = TRUE;
 
-2. **Create Core AI View** ⭐ 
+   ```
+
+2. **Create Core AI View**
+
    ```sql
    -- This is the heart of the app - AI-powered image analysis
    CREATE OR REPLACE VIEW SMART_CROWD_COUNTER AS 
