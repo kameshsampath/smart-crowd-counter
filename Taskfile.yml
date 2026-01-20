@@ -1,0 +1,131 @@
+# Copyright 2026 Kamesh Sampath
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# https://taskfile.dev
+
+version: "3"
+
+dotenv: [".env"]
+
+vars:
+    SNOWFLAKE_DATABASE: '{{.SNOWFLAKE_DATABASE | default "CROWD_COUNTER_DB"}}'
+    SNOWFLAKE_SCHEMA: '{{.SNOWFLAKE_SCHEMA | default "CONFERENCES"}}'
+    SNOWFLAKE_STAGE: '{{.SNOWFLAKE_STAGE | default "SNAPS"}}'
+    AI_MODEL: '{{.AI_MODEL | default "claude-4-sonnet"}}'
+
+tasks:
+    default:
+        desc: Show available tasks
+        cmds:
+            - task --list
+
+    # =========================================================================
+    # Snowflake CLI Tasks (snow:*)
+    # =========================================================================
+
+    snow:check:
+        desc: Verify Snowflake CLI is installed and configured
+        cmds:
+            - snow --version
+            - snow connection test
+        silent: true
+
+    snow:setup:
+        desc: Create all Snowflake objects (database, schema, stage, view)
+        deps: [snow:check]
+        cmds:
+            - |
+                snow sql -f setup.sql --templating=ALL \
+                  -D database={{.SNOWFLAKE_DATABASE}} \
+                  -D schema={{.SNOWFLAKE_SCHEMA}} \
+                  -D stage={{.SNOWFLAKE_STAGE}} \
+                  -D ai_model={{.AI_MODEL}}
+        sources:
+            - setup.sql
+
+    snow:setup:dry-run:
+        desc: Preview the rendered SQL without executing
+        deps: [snow:check]
+        cmds:
+            - |
+                snow sql -f setup.sql --templating=ALL \
+                  -D database={{.SNOWFLAKE_DATABASE}} \
+                  -D schema={{.SNOWFLAKE_SCHEMA}} \
+                  -D stage={{.SNOWFLAKE_STAGE}} \
+                  -D ai_model={{.AI_MODEL}} \
+                  --dry-run
+
+    snow:upload:
+        desc: Upload images to Snowflake stage
+        summary: |
+            Upload image files to the configured Snowflake stage.
+
+            Usage:
+              task snow:upload -- /path/to/images/*.jpg
+              task snow:upload -- photo1.jpg photo2.png
+        deps: [snow:check]
+        cmds:
+            - |
+                for file in {{.CLI_ARGS}}; do
+                  echo "Uploading: $file"
+                  snow stage copy "$file" "@{{.SNOWFLAKE_DATABASE}}.{{.SNOWFLAKE_SCHEMA}}.{{.SNOWFLAKE_STAGE}}/"
+                done
+            - task: snow:refresh
+
+    snow:refresh:
+        desc: Refresh the stage directory table
+        deps: [snow:check]
+        cmds:
+            - snow sql -q "ALTER STAGE {{.SNOWFLAKE_DATABASE}}.{{.SNOWFLAKE_SCHEMA}}.{{.SNOWFLAKE_STAGE}} REFRESH"
+
+    snow:list:
+        desc: List files in the stage
+        deps: [snow:check]
+        cmds:
+            - snow sql -q "LIST @{{.SNOWFLAKE_DATABASE}}.{{.SNOWFLAKE_SCHEMA}}.{{.SNOWFLAKE_STAGE}}"
+
+    snow:query:
+        desc: Query the smart crowd counter view
+        deps: [snow:check]
+        cmds:
+            - snow sql -q "SELECT name, total_attendees, raised_hands, percentage_with_hands_up FROM
+              {{.SNOWFLAKE_DATABASE}}.{{.SNOWFLAKE_SCHEMA}}.SMART_CROWD_COUNTER"
+
+    snow:clean:
+        desc: Remove uploaded files from stage (keeps objects)
+        deps: [snow:check]
+        cmds:
+            - echo "⚠️  WARNING - This will delete ALL files from stage
+              @{{.SNOWFLAKE_DATABASE}}.{{.SNOWFLAKE_SCHEMA}}.{{.SNOWFLAKE_STAGE}}"
+            - snow sql -q "REMOVE @{{.SNOWFLAKE_DATABASE}}.{{.SNOWFLAKE_SCHEMA}}.{{.SNOWFLAKE_STAGE}}/"
+            - echo "✅ Stage cleaned successfully"
+        prompt:
+            "⚠️  DESTRUCTIVE ACTION: Delete all files from
+            @{{.SNOWFLAKE_DATABASE}}.{{.SNOWFLAKE_SCHEMA}}.{{.SNOWFLAKE_STAGE}}?"
+
+    snow:teardown:
+        desc: Drop all created Snowflake objects (DESTRUCTIVE)
+        deps: [snow:check]
+        cmds:
+            - |
+                echo "⚠️  WARNING - The following objects will be PERMANENTLY DELETED:"
+                echo "   • View:   {{.SNOWFLAKE_DATABASE}}.{{.SNOWFLAKE_SCHEMA}}.SMART_CROWD_COUNTER"
+                echo "   • Stage:  {{.SNOWFLAKE_DATABASE}}.{{.SNOWFLAKE_SCHEMA}}.{{.SNOWFLAKE_STAGE}}"
+                echo "   • Schema: {{.SNOWFLAKE_DATABASE}}.{{.SNOWFLAKE_SCHEMA}} (and all objects within)"
+                echo ""
+            - snow sql -q "DROP VIEW IF EXISTS {{.SNOWFLAKE_DATABASE}}.{{.SNOWFLAKE_SCHEMA}}.SMART_CROWD_COUNTER"
+            - snow sql -q "DROP STAGE IF EXISTS {{.SNOWFLAKE_DATABASE}}.{{.SNOWFLAKE_SCHEMA}}.{{.SNOWFLAKE_STAGE}}"
+            - snow sql -q "DROP SCHEMA IF EXISTS {{.SNOWFLAKE_DATABASE}}.{{.SNOWFLAKE_SCHEMA}}"
+            - echo "✅ Teardown complete - all objects dropped"
+        prompt: "🚨 DESTRUCTIVE ACTION: Drop schema {{.SNOWFLAKE_DATABASE}}.{{.SNOWFLAKE_SCHEMA}} and ALL its objects?"
