@@ -161,12 +161,9 @@ Perfect for live demos showcasing AI capabilities in real-world scenarios!
 - **Streamlit** for the intuitive app development framework
 - **Community** for inspiration and feedback
 
-## 📞 Support
+## License
 
-For questions or issues:
-- Open a GitHub issue
-- Check Snowflake documentation for AISQL specifics
-- Review Streamlit docs for UI customization
+Copyright (c) Kamesh Sampath. All rights reserved. Licensed under the [Apache 2.0 license](LICENSE).
 
 ---
 
