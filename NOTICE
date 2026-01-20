@@ -1,0 +1,71 @@
+Smart Crowd Counter
+Copyright 2026 Kamesh Sampath
+<https://github.com/kameshsampath/smart-crowd-counter>
+
+================================================================================
+ATTRIBUTION REQUIREMENTS
+================================================================================
+
+This software is licensed under the Apache License, Version 2.0.
+
+If you use, modify, or redistribute this software, you MUST:
+
+1. Include this NOTICE file in any distribution
+2. Retain all copyright notices in source files
+3. Clearly attribute the original work to Kamesh Sampath
+4. If presenting demos or talks using this software, credit the original author
+
+Suggested attribution formats:
+
+  For README/documentation:
+    "Based on Smart Crowd Counter by Kamesh Sampath"
+    "Originally developed by Kamesh Sampath (<https://github.com/kameshsampath>)"
+
+  For presentations/demos:
+    "Smart Crowd Counter - Created by Kamesh Sampath"
+
+  For academic citations, see CITATION.cff or use:
+    Kamesh Sampath, Smart Crowd Counter [Computer software].
+    <https://github.com/kameshsampath/smart-crowd-counter>
+
+================================================================================
+LICENSE
+================================================================================
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+================================================================================
+THIRD-PARTY COMPONENTS
+================================================================================
+
+This project uses the following third-party components:
+
+Streamlit
+
+- License: Apache License 2.0
+- <https://streamlit.io>
+
+Snowflake Snowpark Python
+
+- License: Apache License 2.0
+- <https://www.snowflake.com>
+
+Altair
+
+- License: BSD 3-Clause
+- <https://altair-viz.github.io>
+
+Pandas
+
+- License: BSD 3-Clause
+- <https://pandas.pydata.org>

@@ -1,6 +1,21 @@
+# Copyright 2026 Kamesh Sampath
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 # Import python packages
 import streamlit as st
 import io
+import os
 import pandas as pd
 import altair as alt
 from snowflake.core import Root, CreateMode
@@ -9,6 +24,14 @@ from snowflake.core.stage import Stage, StageEncryption, StageDirectoryTable
 from snowflake.snowpark.context import get_active_session
 import time
 import json
+
+# Configuration from environment variables (with defaults)
+CONFIG = {
+    "database": os.getenv("SNOWFLAKE_DATABASE", "CROWD_COUNTER_DB"),
+    "schema": os.getenv("SNOWFLAKE_SCHEMA", "CONFERENCES"),
+    "stage": os.getenv("SNOWFLAKE_STAGE", "SNAPS"),
+    "ai_model": os.getenv("AI_MODEL", "claude-4-sonnet"),
+}
 
 st.title("Smart Crowd Counter 👥")
 st.write(
@@ -29,10 +52,10 @@ if "selected_row" not in st.session_state:
     st.session_state.selected_row = []
 
 if "cat_database" not in st.session_state:
-     st.session_state.cat_database = "KAMESH_DEMOS"
+    st.session_state.cat_database = CONFIG["database"]
 
 if "cat_schema" not in st.session_state:
-     st.session_state.cat_schema = "CONFERENCES"
+    st.session_state.cat_schema = CONFIG["schema"]
 
 if "files_uploaded" not in st.session_state:
     st.session_state.files_uploaded = False
@@ -43,14 +66,12 @@ root = Root(session)
 
 db_idx = 0
 schema_idx = 0
-__stage_name = "snaps"
+__stage_name = CONFIG["stage"].lower()
 __stage_schema = None
-
-__model_name = 'claude-4-sonnet'
 
 # Function to refresh data from table
 def refresh_data():
-    __sql = "select * from kamesh_demos.conferences.smart_crowd_counter"
+    __sql = f"SELECT * FROM {st.session_state.cat_database}.{st.session_state.cat_schema}.SMART_CROWD_COUNTER"
     return session.sql(__sql).to_pandas()
 
 def get_image_url_from_stage(file_json_str):

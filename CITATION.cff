@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "Smart Crowd Counter"
+abstract:
+    "A Streamlit app that analyzes conference session photos using Snowflake Cortex AISQL to automatically count
+    attendees and detect raised hands, providing real-time insights into audience engagement and badge distribution
+    rates."
+authors:
+    - family-names: "Sampath"
+      given-names: "Kamesh"
+      orcid: ""
+repository-code: "https://github.com/kameshsampath/smart-crowd-counter"
+url: "https://github.com/kameshsampath/smart-crowd-counter"
+license: Apache-2.0
+version: "1.0.0"
+date-released: 2026-01-20
+keywords:
+    - streamlit
+    - snowflake
+    - cortex-aisql
+    - crowd-counting
+    - image-analysis
+    - conference-analytics
+    - ai
+    - machine-learning
