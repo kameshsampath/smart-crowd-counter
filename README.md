@@ -31,7 +31,7 @@ Perfect for live demos showcasing AI capabilities in real-world scenarios!
 
 ## 📋 Prerequisites
 
-- [Snowflake account](https://signup.snowflake.com/) with Cortex AISQL enabled
+- [Snowflake account](https://bit.ly/snow-india-meetups) with Cortex AISQL enabled
 - Database and schema with appropriate permissions
 - Snowflake stage for file storage
 
