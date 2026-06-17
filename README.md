@@ -2,14 +2,17 @@
 
 AI-powered conference attendee counting and engagement analytics built on **Snowflake App Runtime** (Next.js / React / TypeScript).
 
-Upload conference session photos and Snowflake Cortex AI analyzes them to count total attendees, detect raised hands, and calculate engagement conversion rates.
+Upload conference session photos and Snowflake Cortex AI analyzes them to count total attendees, detect raised hands, classify session types, and enrich with EXIF metadata + reverse geocoding.
 
 ## Features
 
 - **Multi-file upload** — Drag-and-drop JPG/PNG photos from conference sessions
-- **AI image analysis** — Cortex AI (`claude-4-sonnet`) counts people and raised hands
-- **Real-time dashboard** — Sortable table, metrics cards, donut chart
-- **Image preview** — Click any row to see the photo with presigned URL
+- **AI image analysis** — Cortex AI (`claude-4-sonnet`) counts people, raised hands, infers session type and venue context
+- **EXIF metadata extraction** — GPS coordinates, camera make/model, timestamp from JPEG files
+- **Reverse geocoding** — Resolves GPS lat/lon to human-readable location names (e.g., "Bengaluru, Karnataka, India")
+- **Smart image resizing** — Images >3 MB auto-resized before upload to stay within AI model input limits
+- **Reactive dashboard** — SWR-based polling, no manual refresh, auto-detects external stage changes
+- **Image preview** — Click any row to see photo + AI scene context + location + EXIF details
 - **Self-contained** — Auto-creates all Snowflake objects on first run
 
 ## Quick Start
@@ -37,15 +40,17 @@ Open [http://localhost:3000](http://localhost:3000). On first request, the app a
 
 ```
 Next.js App (React 19 + TypeScript)
-├── Frontend: Dashboard with SWR data fetching
+├── Frontend: Dashboard with SWR reactive data fetching
 ├── API Routes:
 │   ├── GET  /api/images        → Query SMART_CROWD_COUNTER view
-│   ├── POST /api/upload        → PUT files to Snowflake stage
+│   ├── GET  /api/file-count    → Cheap directory count for sync detection
+│   ├── POST /api/upload        → EXIF extract → resize → PUT → geocode → MERGE
 │   └── GET  /api/presigned-url → Generate image display URLs
 └── Snowflake Layer:
-    ├── Auto-setup (CREATE IF NOT EXISTS for all objects)
+    ├── Auto-setup (SHOW + CREATE IF NOT EXISTS for all objects)
     ├── Internal stage with directory table
-    └── View calling Cortex AI_COMPLETE for image analysis
+    ├── IMAGE_METADATA table (EXIF + reverse-geocoded location)
+    └── View: AI_COMPLETE + REGEXP_SUBSTR + LEFT JOIN metadata
 ```
 
 ## Environment Variables
@@ -84,97 +89,9 @@ Learn more about IDD:
 
 ### The IDD Prompt
 
-The following prompt was used to generate this entire application. You can reproduce the migration by pasting it into [Cortex Code](https://docs.snowflake.com/en/user-guide/cortex-code/cortex-code) on the `main` branch:
+The full prompt used to generate this application is in **[IDD_PROMPT.md](./IDD_PROMPT.md)**.
 
-```markdown
-## Goal
-
-Migrate the Smart Crowd Counter app from Streamlit-in-Snowflake to a
-Snowflake App Runtime application (Next.js 15 / React 19 / TypeScript)
-on a new branch called `feat/react-app`. The resulting app must be fully
-self-contained: if the Snowflake database, schema, stage, or view do not
-exist, the app creates them automatically on first run.
-
-## Requirements
-
-- Scaffold a Next.js 15 project with App Router, TypeScript, Tailwind CSS,
-  and a `src/` directory structure
-- Create a Snowflake data access layer (`src/lib/snowflake.ts`) that:
-  - In deployed mode, reads the OAuth token from /snowflake/session/token
-  - In local dev mode, parses ~/.snowflake/config.toml (or connections.toml)
-    using SNOWFLAKE_DEFAULT_CONNECTION_NAME from .env.local — supports
-    SNOWFLAKE_JWT (key-pair) and EXTERNALBROWSER authenticators
-  - No passwords in .env files — leverage existing Snowflake CLI config
-- Create an auto-setup module (`src/lib/setup.ts`) that:
-  - Runs once on the first API request (cached after success)
-  - Checks each object exists (via SHOW) before attempting creation —
-    so roles without CREATE privileges skip already-existing objects
-  - Creates the database, schema, stage (SSE + directory table), and
-    the SMART_CROWD_COUNTER view only if they don't exist
-  - Uses the same Cortex AI SQL logic from the existing setup.sql
-  - Reads all object names and AI model from environment variables
-- Implement four API routes:
-  - GET /api/images — queries the SMART_CROWD_COUNTER view
-  - GET /api/file-count — cheap directory table count (no AI) for
-    detecting external changes to the stage
-  - POST /api/upload — accepts multipart files, PUTs them to the
-    Snowflake stage, refreshes the stage directory
-  - GET /api/presigned-url — generates a presigned URL using server-side
-    config (client only passes the relative path, not the stage name)
-- Each API route calls ensureSnowflakeObjects() before doing its work
-- Build five React components:
-  - FileUploader (drag-and-drop, multi-file, jpg/png/jpeg validation,
-    disabled until initial data loads)
-  - DataTable (sortable, single-row selection, hides internal columns)
-  - MetricsCards (Total Attendees, Raised Hands, Conversion Rate)
-  - DonutChart (Recharts PieChart showing attendees vs raised hands)
-  - ImageViewer (displays image via presigned URL with file metadata)
-- Compose the dashboard page with reactive data fetching:
-  - Use SWR with keepPreviousData: true (no table flash on refetch)
-  - After upload, poll every 5s until new rows appear (Cortex AI
-    processing time), then stop automatically
-  - Poll GET /api/file-count every 10s to detect external stage changes
-    (e.g., files deleted via CLI); trigger full refetch only when count
-    diverges from current row count — avoids expensive AI re-queries
-  - Show "Processing N new images..." indicator during polling
-  - Disable upload until initial data load completes
-  - No manual refresh button — data updates reactively
-- Include app.yml manifest for Snowflake App Runtime
-- Extend Taskfile.yml with app:dev, app:build, app:reset (clear stage
-  for demo scenarios) tasks
-
-## Constraints
-
-- Do NOT modify files on the main branch; create and work only on
-  feat/react-app
-- Do NOT push to remote or deploy — local testing only (npm run dev)
-- Do NOT add a database/schema selector UI — use environment config
-- Do NOT pass Snowflake config to the client — all SQL execution and
-  stage references stay server-side in API routes
-- The app must be self-contained: a fresh clone + .env.local + npm run dev
-  should create all Snowflake objects automatically
-- Keep the SMART_CROWD_COUNTER view SQL logic identical to setup.sql
-  (same AI prompts, same column structure)
-- Minimize dependencies: next, react, react-dom, snowflake-sdk,
-  recharts, swr
-- Use Tailwind CSS for styling — no additional UI component libraries
-- This is a React app, not Streamlit — no full-page rerenders, no
-  manual refresh buttons, no clearing the table on data refetch
-
-## Output
-
-- A working Next.js app on branch feat/react-app that starts with
-  `npm run dev` and auto-creates Snowflake objects on first request
-- All five UI features functional: upload, table, row selection,
-  image preview, chart
-- Updated .env.example documenting required environment variables
-  (SNOWFLAKE_DEFAULT_CONNECTION_NAME + object overrides only)
-- Updated Taskfile.yml with app:dev, app:build, app:reset tasks
-- README.md with a "Built with IDD" section containing the prompt
-  and ICR score breakdown
-- Report: list each file created/modified and confirm the app runs
-  without errors on first launch against an empty Snowflake account
-```
+It demonstrates a complete Streamlit-to-React migration expressed as structured intent following the [Goal][Requirements][Constraints][Output] pattern. Paste it into [Cortex Code](https://docs.snowflake.com/en/user-guide/cortex-code/cortex-code) on the `main` branch to reproduce the full migration.
 
 ### ICR Score Breakdown
 
@@ -188,14 +105,14 @@ ICR = Total Required Operations / Intent Expressions
 |---|---|---|---|
 | 1 | Scaffold Next.js project | create-next-app, tsconfig, tailwind, postcss, app.yml, .env.example, .gitignore, package.json, layout.tsx, next.config (standalone) | 10 |
 | 2 | Snowflake data access layer | snowflake.ts (TOML parser, dual-mode auth, getConnection, querySnowflake, uploadToStage, getConfig) | 6 |
-| 3 | Auto-setup module | setup.ts (existence checks via SHOW, conditional CREATE for DB/SCHEMA/STAGE/VIEW, caching, error handling) | 8 |
-| 4 | Four API routes | images/route.ts, file-count/route.ts, upload/route.ts, presigned-url/route.ts (server-side config, validation, error handling) | 8 |
-| 5 | Five UI components | FileUploader (disabled state, drag-and-drop), DataTable, MetricsCards, DonutChart, ImageViewer (each with props, state, styling) | 12 |
-| 6 | Reactive page composition | page.tsx (SWR + keepPreviousData, upload polling with auto-stop, file-count sync polling, divergence detection, upload-disabled-until-ready, status indicators, responsive grid) | 10 |
+| 3 | Auto-setup module | setup.ts (existence checks, conditional CREATE for DB/SCHEMA/STAGE/TABLE/VIEW, REGEXP_SUBSTR JSON extraction, LEFT JOIN metadata, caching) | 11 |
+| 4 | Four API routes + upload pipeline | images/route.ts, file-count/route.ts, upload/route.ts (EXIF extract + JPEG validation + reverse geocode + sharp resize + MERGE + non-fatal error handling), presigned-url/route.ts, type declarations | 14 |
+| 5 | Five UI components | FileUploader (disabled state), DataTable (session type + location_name fallback chain), MetricsCards, DonutChart, ImageViewer (AI context + geocoded pin + collapsible EXIF + map link) | 15 |
+| 6 | Reactive page composition | page.tsx (SWR + keepPreviousData, upload polling, file-count sync, divergence detection, upload-disabled, responsive grid) | 10 |
 | 7 | Taskfile + demo workflow | app:dev, app:build, app:deploy, app:open, app:reset (stage clear for demos) | 5 |
-| | **Total** | | **59 ops / 7 intents** |
+| | **Total** | | **71 ops / 7 intents** |
 
-### **ICR = 8.4**
+### **ICR = 10.1**
 
 On the ICR scale:
 
@@ -203,7 +120,7 @@ On the ICR scale:
 - **ICR 4-8** = Automation wrapper
 - **ICR 9+** = Architectural partner
 
-This prompt scores **8.4** — at the boundary of architectural partner. With the Output section requiring a report (Glass Box observability) and the Constraints encoding production lessons (no full-page rerenders, server-side config only, reactive sync via cheap polling, avoid expensive AI re-queries), this qualifies as **Glass Box Compression**: high ICR + full observability + codified wisdom.
+This prompt scores **10.1** — in the architectural partner range. A single structured intent produces a complete system with an image processing pipeline (EXIF extraction, reverse geocoding, AI-safe resizing), Cortex AI-enriched views with robust JSON parsing, reactive sync, and a metadata storage layer. With Glass Box observability (Output report requirement) and Codified Wisdom (Constraints encoding production lessons like the REGEXP_SUBSTR fix and non-fatal MERGE), this is the target design point for IDD app migrations.
 
 ---
 

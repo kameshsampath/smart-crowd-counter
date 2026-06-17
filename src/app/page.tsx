@@ -113,10 +113,7 @@ export default function Home() {
       {selectedRow && (
         <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-4">
-            <ImageViewer
-              fileName={selectedRow.FILE_NAME}
-              caption={selectedRow.CAPTION}
-            />
+            <ImageViewer row={selectedRow} />
           </div>
           <div className="space-y-4">
             <MetricsCards
