@@ -1,212 +1,212 @@
 # Smart Crowd Counter
 
-A Streamlit app that counts people in conference session photos using Snowflake Cortex AISQL. It detects raised hands too, which is handy for tracking badge giveaways or audience engagement.
+AI-powered conference attendee counting and engagement analytics built on **Snowflake App Runtime** (Next.js / React / TypeScript).
 
-## What it does
+Upload conference session photos and Snowflake Cortex AI analyzes them to count total attendees, detect raised hands, and calculate engagement conversion rates.
 
-- Counts attendees in uploaded photos
-- Detects raised hands
-- Shows conversion rates (hands up vs total people)
-- Displays images with interactive analytics
+## Features
 
-## Tech Stack
+- **Multi-file upload** — Drag-and-drop JPG/PNG photos from conference sessions
+- **AI image analysis** — Cortex AI (`claude-4-sonnet`) counts people and raised hands
+- **Real-time dashboard** — Sortable table, metrics cards, donut chart
+- **Image preview** — Click any row to see the photo with presigned URL
+- **Self-contained** — Auto-creates all Snowflake objects on first run
 
-- [Snowflake Cortex AISQL](https://docs.snowflake.com/en/user-guide/snowflake-cortex/aisql) for image analysis
-- [Streamlit in Snowflake](https://docs.snowflake.com/en/developer-guide/streamlit/about-streamlit) for the app
-- [Snowflake CLI](https://docs.snowflake.com/en/developer-guide/snowflake-cli) for setup automation
-- Python, Altair for charts
-
-## Prerequisites
-
-- Snowflake account with Cortex AISQL enabled ([sign up here](https://signup.snowflake.com/) if you don't have one)
-- [Snowflake CLI](https://docs.snowflake.com/en/developer-guide/snowflake-cli/installation/installation) installed and configured
-- [Task](https://taskfile.dev/installation/) (optional, for automation)
-
-## Setup
-
-### 1. Configure Environment
-
-Copy the example environment file and update with your values:
+## Quick Start
 
 ```bash
-cp .env.example .env
+# 1. Clone and checkout
+git clone <repo-url>
+cd smart-crowd-counter
+git checkout feat/react-app
+
+# 2. Install dependencies
+npm install
+
+# 3. Configure environment
+cp .env.example .env.local
+# Edit .env.local with your Snowflake credentials
+
+# 4. Run
+npm run dev
 ```
 
-Edit `.env` with your Snowflake connection details:
+Open [http://localhost:3000](http://localhost:3000). On first request, the app automatically creates the database, schema, stage, and view in Snowflake.
+
+## Architecture
+
+```
+Next.js App (React 19 + TypeScript)
+├── Frontend: Dashboard with SWR data fetching
+├── API Routes:
+│   ├── GET  /api/images        → Query SMART_CROWD_COUNTER view
+│   ├── POST /api/upload        → PUT files to Snowflake stage
+│   └── GET  /api/presigned-url → Generate image display URLs
+└── Snowflake Layer:
+    ├── Auto-setup (CREATE IF NOT EXISTS for all objects)
+    ├── Internal stage with directory table
+    └── View calling Cortex AI_COMPLETE for image analysis
+```
+
+## Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `SNOWFLAKE_DEFAULT_CONNECTION_NAME` | Connection name from `~/.snowflake/connections.toml` | `default` |
+| `SNOWFLAKE_DATABASE` | Database name | `CROWD_COUNTER_DB` |
+| `SNOWFLAKE_SCHEMA` | Schema name | `CONFERENCES` |
+| `SNOWFLAKE_STAGE` | Stage name | `SNAPS` |
+| `AI_MODEL` | Cortex AI model | `claude-4-sonnet` |
+
+For local development, the app reads credentials from your existing `~/.snowflake/connections.toml` — no passwords in `.env.local` needed.
+
+## Deploy to Snowflake
 
 ```bash
-# Snowflake Connection
-SNOWFLAKE_ACCOUNT=your_account
-SNOWFLAKE_USER=your_username
-SNOWFLAKE_ROLE=your_role
-SNOWFLAKE_WAREHOUSE=your_warehouse
-
-# Application Configuration
-SNOWFLAKE_DATABASE=CROWD_COUNTER_DB
-SNOWFLAKE_SCHEMA=CONFERENCES
-SNOWFLAKE_STAGE=SNAPS
-
-# AI Model
-AI_MODEL=claude-4-sonnet
+snow app setup --app-name smart_crowd_counter
+snow app deploy
+snow app open
 ```
 
-### 2. Run Setup
+---
 
-Choose one of the following methods:
+## Built with Intent-Driven Development (IDD)
 
-#### Option A: Using Task (recommended)
+This application was built using **Intent-Driven Development** — a methodology where intent is the source of truth and code is the output artifact. Instead of writing code line-by-line, the developer expresses structured intent and an AI coding agent generates the complete system.
 
-```bash
-# Verify Snowflake CLI connection
-task snow:check
+Learn more about IDD:
 
-# Preview rendered SQL (dry run)
-task snow:setup:dry-run
+- [Intent-Driven Development: The Shift Developers Can't Ignore](https://blogs.kameshs.dev/intent-driven-development-the-shift-developers-cant-ignore-ef434f94d56c)
+- [Intent Compression Ratio: Measuring the Power of Intent](https://blogs.kameshs.dev/intent-compression-ratio-measuring-the-power-of-intent-ceb6faf2e2f9)
+- [ICR and Token Economics](https://blogs.kameshs.dev/icr-and-token-economics-9a014a75b399)
+- [Infrastructure-as-Intent: The Field Velocity Blueprint](https://blogs.kameshs.dev/infrastructure-as-intent-the-field-velocity-blueprint-e6217ef30f14)
+- [The Ghost in the Machine: Why AI Needs the Spirit of UML](https://blogs.kameshs.dev/the-ghost-in-the-machine-why-ai-needs-the-spirit-of-uml-0d8864e583e2)
 
-# Create all Snowflake objects
-task snow:setup
+### The IDD Prompt
+
+The following prompt was used to generate this entire application. You can reproduce the migration by pasting it into [Cortex Code](https://docs.snowflake.com/en/user-guide/cortex-code/cortex-code) on the `main` branch:
+
+```markdown
+## Goal
+
+Migrate the Smart Crowd Counter app from Streamlit-in-Snowflake to a
+Snowflake App Runtime application (Next.js 15 / React 19 / TypeScript)
+on a new branch called `feat/react-app`. The resulting app must be fully
+self-contained: if the Snowflake database, schema, stage, or view do not
+exist, the app creates them automatically on first run.
+
+## Requirements
+
+- Scaffold a Next.js 15 project with App Router, TypeScript, Tailwind CSS,
+  and a `src/` directory structure
+- Create a Snowflake data access layer (`src/lib/snowflake.ts`) that:
+  - In deployed mode, reads the OAuth token from /snowflake/session/token
+  - In local dev mode, parses ~/.snowflake/config.toml (or connections.toml)
+    using SNOWFLAKE_DEFAULT_CONNECTION_NAME from .env.local — supports
+    SNOWFLAKE_JWT (key-pair) and EXTERNALBROWSER authenticators
+  - No passwords in .env files — leverage existing Snowflake CLI config
+- Create an auto-setup module (`src/lib/setup.ts`) that:
+  - Runs once on the first API request (cached after success)
+  - Checks each object exists (via SHOW) before attempting creation —
+    so roles without CREATE privileges skip already-existing objects
+  - Creates the database, schema, stage (SSE + directory table), and
+    the SMART_CROWD_COUNTER view only if they don't exist
+  - Uses the same Cortex AI SQL logic from the existing setup.sql
+  - Reads all object names and AI model from environment variables
+- Implement four API routes:
+  - GET /api/images — queries the SMART_CROWD_COUNTER view
+  - GET /api/file-count — cheap directory table count (no AI) for
+    detecting external changes to the stage
+  - POST /api/upload — accepts multipart files, PUTs them to the
+    Snowflake stage, refreshes the stage directory
+  - GET /api/presigned-url — generates a presigned URL using server-side
+    config (client only passes the relative path, not the stage name)
+- Each API route calls ensureSnowflakeObjects() before doing its work
+- Build five React components:
+  - FileUploader (drag-and-drop, multi-file, jpg/png/jpeg validation,
+    disabled until initial data loads)
+  - DataTable (sortable, single-row selection, hides internal columns)
+  - MetricsCards (Total Attendees, Raised Hands, Conversion Rate)
+  - DonutChart (Recharts PieChart showing attendees vs raised hands)
+  - ImageViewer (displays image via presigned URL with file metadata)
+- Compose the dashboard page with reactive data fetching:
+  - Use SWR with keepPreviousData: true (no table flash on refetch)
+  - After upload, poll every 5s until new rows appear (Cortex AI
+    processing time), then stop automatically
+  - Poll GET /api/file-count every 10s to detect external stage changes
+    (e.g., files deleted via CLI); trigger full refetch only when count
+    diverges from current row count — avoids expensive AI re-queries
+  - Show "Processing N new images..." indicator during polling
+  - Disable upload until initial data load completes
+  - No manual refresh button — data updates reactively
+- Include app.yml manifest for Snowflake App Runtime
+- Extend Taskfile.yml with app:dev, app:build, app:reset (clear stage
+  for demo scenarios) tasks
+
+## Constraints
+
+- Do NOT modify files on the main branch; create and work only on
+  feat/react-app
+- Do NOT push to remote or deploy — local testing only (npm run dev)
+- Do NOT add a database/schema selector UI — use environment config
+- Do NOT pass Snowflake config to the client — all SQL execution and
+  stage references stay server-side in API routes
+- The app must be self-contained: a fresh clone + .env.local + npm run dev
+  should create all Snowflake objects automatically
+- Keep the SMART_CROWD_COUNTER view SQL logic identical to setup.sql
+  (same AI prompts, same column structure)
+- Minimize dependencies: next, react, react-dom, snowflake-sdk,
+  recharts, swr
+- Use Tailwind CSS for styling — no additional UI component libraries
+- This is a React app, not Streamlit — no full-page rerenders, no
+  manual refresh buttons, no clearing the table on data refetch
+
+## Output
+
+- A working Next.js app on branch feat/react-app that starts with
+  `npm run dev` and auto-creates Snowflake objects on first request
+- All five UI features functional: upload, table, row selection,
+  image preview, chart
+- Updated .env.example documenting required environment variables
+  (SNOWFLAKE_DEFAULT_CONNECTION_NAME + object overrides only)
+- Updated Taskfile.yml with app:dev, app:build, app:reset tasks
+- README.md with a "Built with IDD" section containing the prompt
+  and ICR score breakdown
+- Report: list each file created/modified and confirm the app runs
+  without errors on first launch against an empty Snowflake account
 ```
 
-#### Option B: Using Snowflake CLI
+### ICR Score Breakdown
 
-The setup script uses [Jinja2 templating](https://docs.snowflake.com/en/sql-reference/sql/execute-immediate-from#jinja2-templating) for variable substitution:
-
-```bash
-snow sql -f setup.sql --templating=ALL \
-  -D database=CROWD_COUNTER_DB \
-  -D schema=CONFERENCES \
-  -D stage=SNAPS \
-  -D ai_model=claude-4-sonnet
-```
-
-#### Option C: Using Snowflake Workspaces (No CLI required)
-
-If you prefer working directly in Snowflake's UI without installing any CLI tools:
-
-1. Open [Snowsight](https://app.snowflake.com) and navigate to **Worksheets**
-2. Create a new SQL Worksheet in your [Workspace](https://docs.snowflake.com/en/user-guide/ui-snowsight/workspaces)
-3. Copy the contents of `setup.sql` into the worksheet
-4. Replace the Jinja2 variables with your values:
-   - `{{ db }}` → `CROWD_COUNTER_DB` (or your database name)
-   - `{{ sch }}` → `CONFERENCES` (or your schema name)
-   - `{{ stg }}` → `SNAPS` (or your stage name)
-   - `{{ model }}` → `claude-4-sonnet` (or your preferred model)
-5. Run all statements (Ctrl/Cmd + Shift + Enter)
-
-> **Tip:** Use Find and Replace (Ctrl/Cmd + H) to quickly substitute all variables.
-
-#### Option D: Using EXECUTE IMMEDIATE FROM
-
-Upload `setup.sql` to a stage, then run:
-
-```sql
-EXECUTE IMMEDIATE FROM @my_stage/setup.sql
-  USING (database => 'CROWD_COUNTER_DB',
-         schema => 'CONFERENCES',
-         stage => 'SNAPS',
-         ai_model => 'claude-4-sonnet');
-```
-
-### 3. Deploy the App
-
-Upload `app.py` to your Snowflake environment and create a Streamlit app using Snowflake's native Streamlit support.
-
-## Usage
-
-**With the app:**
-
-1. Select your database and schema from the dropdowns
-2. Upload conference photos (JPG, PNG, JPEG)
-3. Wait for the analysis to complete
-4. Click on any row to see the image and detailed charts
-
-**From command line:**
-
-```bash
-# Upload images
-task snow:upload -- /path/to/photos/*.jpg
-
-# List uploaded files
-task snow:list
-
-# Query results
-task snow:query
-```
-
-## Available Tasks
-
-Run `task` to see all available commands:
-
-| Task | Description |
-|------|-------------|
-| `task snow:check` | Verify Snowflake CLI is installed and configured |
-| `task snow:setup` | Create all Snowflake objects |
-| `task snow:setup:dry-run` | Preview rendered SQL without executing |
-| `task snow:upload -- FILES` | Upload images to stage |
-| `task snow:list` | List files in stage |
-| `task snow:query` | Query the crowd counter view |
-| `task snow:refresh` | Refresh stage directory |
-| `task snow:clean` | Remove files from stage |
-| `task snow:teardown` | Drop all created objects (DESTRUCTIVE) |
-
-## Configuration
-
-All configuration is managed through environment variables in `.env`:
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `SNOWFLAKE_DATABASE` | `CROWD_COUNTER_DB` | Target database |
-| `SNOWFLAKE_SCHEMA` | `CONFERENCES` | Target schema |
-| `SNOWFLAKE_STAGE` | `SNAPS` | Stage for images |
-| `AI_MODEL` | `claude-4-sonnet` | Cortex AI model |
-
-## Project Structure
+**ICR (Intent Compression Ratio)** measures how much work a single intent expression produces:
 
 ```
-smart-crowd-counter/
-├── app.py              # Streamlit application
-├── setup.sql           # Snowflake object creation
-├── Taskfile.yml        # Task automation
-├── environment.yml     # Conda dependencies
-├── .env.example        # Environment template
-├── LICENSE             # Apache 2.0
-├── NOTICE              # Attribution notices
-└── CITATION.cff        # Citation metadata
+ICR = Total Required Operations / Intent Expressions
 ```
 
-## Acknowledgments
+| # | Intent Expression | Operations Generated | Count |
+|---|---|---|---|
+| 1 | Scaffold Next.js project | create-next-app, tsconfig, tailwind, postcss, app.yml, .env.example, .gitignore, package.json, layout.tsx, next.config (standalone) | 10 |
+| 2 | Snowflake data access layer | snowflake.ts (TOML parser, dual-mode auth, getConnection, querySnowflake, uploadToStage, getConfig) | 6 |
+| 3 | Auto-setup module | setup.ts (existence checks via SHOW, conditional CREATE for DB/SCHEMA/STAGE/VIEW, caching, error handling) | 8 |
+| 4 | Four API routes | images/route.ts, file-count/route.ts, upload/route.ts, presigned-url/route.ts (server-side config, validation, error handling) | 8 |
+| 5 | Five UI components | FileUploader (disabled state, drag-and-drop), DataTable, MetricsCards, DonutChart, ImageViewer (each with props, state, styling) | 12 |
+| 6 | Reactive page composition | page.tsx (SWR + keepPreviousData, upload polling with auto-stop, file-count sync polling, divergence detection, upload-disabled-until-ready, status indicators, responsive grid) | 10 |
+| 7 | Taskfile + demo workflow | app:dev, app:build, app:deploy, app:open, app:reset (stage clear for demos) | 5 |
+| | **Total** | | **59 ops / 7 intents** |
 
-- Snowflake for Cortex AISQL
-- Streamlit for making web apps easy
+### **ICR = 8.4**
 
-## Using This Project
+On the ICR scale:
 
-This project is open source under Apache 2.0. You're welcome to use, modify, and share it!
+- **ICR 1** = Command relay (one intent, one action)
+- **ICR 4-8** = Automation wrapper
+- **ICR 9+** = Architectural partner
 
-**If you use this project, please:**
+This prompt scores **8.4** — at the boundary of architectural partner. With the Output section requiring a report (Glass Box observability) and the Constraints encoding production lessons (no full-page rerenders, server-side config only, reactive sync via cheap polling, avoid expensive AI re-queries), this qualifies as **Glass Box Compression**: high ICR + full observability + codified wisdom.
 
-1. Keep the copyright notices and NOTICE file intact
-2. Credit the original author in your README or documentation:
-   > Based on [Smart Crowd Counter](https://github.com/kameshsampath/smart-crowd-counter) by Kamesh Sampath
-3. If presenting at events or demos, mention the original creator
-4. Consider starring the repo if it helped you
-
-**For academic or formal citations**, click the "Cite this repository" button on GitHub or see [CITATION.cff](CITATION.cff).
+---
 
 ## License
 
-Copyright 2026 Kamesh Sampath
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-
-See the [LICENSE](LICENSE) and [NOTICE](NOTICE) files for details.
+Apache License 2.0

@@ -16,7 +16,7 @@
 
 version: "3"
 
-dotenv: [".env"]
+dotenv: [".env", ".env.local"]
 
 vars:
     SNOWFLAKE_DATABASE: '{{.SNOWFLAKE_DATABASE | default "CROWD_COUNTER_DB"}}'
@@ -129,3 +129,38 @@ tasks:
             - snow sql -q "DROP SCHEMA IF EXISTS {{.SNOWFLAKE_DATABASE}}.{{.SNOWFLAKE_SCHEMA}}"
             - echo "✅ Teardown complete - all objects dropped"
         prompt: "🚨 DESTRUCTIVE ACTION: Drop schema {{.SNOWFLAKE_DATABASE}}.{{.SNOWFLAKE_SCHEMA}} and ALL its objects?"
+
+    # =========================================================================
+    # App Tasks (app:*)
+    # =========================================================================
+
+    app:dev:
+        desc: Start Next.js development server
+        cmds:
+            - npm run dev
+
+    app:build:
+        desc: Build the Next.js application
+        cmds:
+            - npm run build
+
+    app:deploy:
+        desc: Deploy to Snowflake App Runtime
+        deps: [snow:check]
+        cmds:
+            - snow app deploy
+
+    app:open:
+        desc: Open the deployed app in browser
+        deps: [snow:check]
+        cmds:
+            - snow app open
+
+    app:reset:
+        desc: Clear all images from stage (for demo reset)
+        deps: [snow:check]
+        cmds:
+            - snow sql -q "REMOVE @{{.SNOWFLAKE_DATABASE}}.{{.SNOWFLAKE_SCHEMA}}.{{.SNOWFLAKE_STAGE}}/"
+            - snow sql -q "ALTER STAGE {{.SNOWFLAKE_DATABASE}}.{{.SNOWFLAKE_SCHEMA}}.{{.SNOWFLAKE_STAGE}} REFRESH"
+            - echo "Stage cleared - ready for fresh demo"
+        prompt: "Clear all images from @{{.SNOWFLAKE_DATABASE}}.{{.SNOWFLAKE_SCHEMA}}.{{.SNOWFLAKE_STAGE}}?"
