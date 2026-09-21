@@ -1,65 +1,91 @@
 # Smart Crowd Counter
 
-Generated from `../PROMPT-v1.md` and extended with `../PROMPT-v2-postgres-map.md` in a disposable subfolder. The parent repository stays prompt-driven; do not commit this generated app.
+An AI-powered conference photo app: upload session photos and get instant crowd size estimates, raised-hand counts, and captions using [Snowflake Cortex AI](https://docs.snowflake.com/en/guides-overview-ai-features), deployed as a [Snowflake App](https://docs.snowflake.com/en/developer-guide/snowflake-apps/about-snowflake-apps).
 
-## Run Locally
+This repo is the generated, deployable app. It's built from the prompts and agent rules in the parent demo repo — **[kameshsampath/smart-crowd-counter-demo](https://github.com/kameshsampath/smart-crowd-counter-demo)** — which includes this repo as a git submodule for quick-check deploys. Start there if you want to regenerate this app yourself with [Cortex Code](https://docs.snowflake.com/en/user-guide/cortex-code/cortex-code); come here to run or deploy it as-is.
+
+## Features
+
+- Photo upload with validation (JPG/JPEG/PNG, size and dimension limits)
+- AI-estimated attendee counts and raised-hand percentage per photo, via two Claude 4 Sonnet calls (`AI_COMPLETE`) per image
+- Auto-generated captions
+- A photo-first dashboard with a hands-up donut chart, light/dark themes, and an "Under the hood" drawer showing the SQL and result JSON behind each estimate
+- Optional session map: GPS pins extracted from photo EXIF, linked back to the source photo (this variant stores GPS metadata in Snowflake Postgres — see [V2 Location Storage](#v2-location-storage))
+- Shared-photo-library reset flow, safe against partial failures (retry token, snapshot-scoped cleanup)
+
+## Quick Start
 
 ```sh
+git clone https://github.com/kameshsampath/smart-crowd-counter.git
+cd smart-crowd-counter
 npm ci
-SNOWFLAKE_CONNECTION_NAME=devrel-ent SNOWFLAKE_DATABASE=CROWD_COUNTER_DB SNOWFLAKE_SCHEMA=CONFERENCES npm run dev
+SNOWFLAKE_CONNECTION_NAME=YOUR_CONNECTION SNOWFLAKE_DATABASE=CROWD_COUNTER_DB SNOWFLAKE_SCHEMA=CONFERENCES npm run dev
 ```
 
-Use the URL printed by Next.js. Local credentials stay in the Snowflake connection configuration. Deployed queries use the Snowflake service identity.
+Use the URL printed by Next.js. Local credentials come from your named Snowflake connection; deployed queries use the app's service identity instead.
 
-For v2, use `scripts/run-local.py --skill-dir <absolute Snowflake Postgres skill directory>` after building. It reads the saved `smart_crowd_counter_runtime` service profile and injects credentials and its CA certificate into the child process without writing a credential file in this repo. PostgreSQL administration uses `psql "service=smart_crowd_counter_pg connect_timeout=10" -X -v ON_ERROR_STOP=1 -f scripts/setup-locations.sql`. The runtime profile must include `sslrootcert`; never disable TLS certificate checks to work around DNS or network failures.
+### Data setup
 
-## Data And Limits
+```sh
+snow sql --connection YOUR_CONNECTION --filename scripts/setup.sql
+```
 
-Run `snow sql --connection devrel-ent --filename scripts/setup.sql` to create the data objects. The script preserves existing objects. The data lives in `CROWD_COUNTER_DB.CONFERENCES`, separate from deployment storage.
+This creates `CROWD_COUNTER_DB.CONFERENCES` objects (stage, directory table, analysis view) if missing, and never touches existing ones. Data storage is intentionally separate from wherever the app itself is deployed.
 
-Photos are shared by all app users. Confirmed reset permanently deletes the shared stage contents. Restrict app access to intended demo users. Uploads accept four JPG/JPEG/PNG images, each at most 3,750,000 bytes and 8000 pixels per dimension. File contents, dimensions and decoding are checked server-side.
-
-The view uses two Claude 4 Sonnet calls per photo: JSON estimates and a caption. It safely parses JSON, retries enclosing Markdown fences, validates counts, and calculates percentages with null for unknown counts or zero denominators. Totals across photos are not unique attendees.
-
-Analysis incurs Cortex charges. New page loads, uploads and explicit re-analysis can rerun it; window focus and reconnect do not. There is no persistent results cache in v1.
-
-## API
-
-- `POST /api/upload`: validated multipart files transferred using callback-based PUT.
-- `GET /api/images`: long-running analysis query.
-- `GET /api/file-count`: directory count without AI calls.
-- `GET /api/stage-image?path=`: decrypted same-origin GET proxy.
-- `POST /api/reset`: requires mutation header and explicit confirmation.
-- `GET /api/locations`: GPS-only refresh without Cortex calls.
-- `GET /api/tiles?z=&x=&y=`: constrained same-origin OpenStreetMap tile proxy.
-
-## V2 Location Storage
-
-`SMART_CROWD_COUNTER_PG` is a dedicated STANDARD_M, 10 GB, Postgres 18 instance with HA off. `crowd_counter.session_locations` stores only GPS plus operational photo keys/timestamps, keyed by fully qualified stage and exact generated PUT filename. The `crowd_counter_runtime` role has only schema usage and table SELECT/INSERT/UPDATE/DELETE, with a stage-scoped row policy. Existing photos are not backfilled. Postgres never stores AI results or joins the Cortex query.
-
-Malformed/missing GPS is nonfatal. Successful PUTs are retained if metadata writes fail; the UI reports that separately. Location lookups preserve every analysis row on failure. Refreshing locations and interacting with the map never runs AI. Colocated markers have a selectable popup list and a keyboard-accessible list below the map.
-
-Confirmed reset removes a signed snapshot of generated photo paths and clears metadata up to its cutoff for this stage only. Partial failures return a retry token; Retry cleanup uses the original snapshot, not newer photos. The token is held by the current page, so finish retries before navigating away. The manifest pins one replica and a process mutex serializes upload/reset. Do not scale this implementation to multiple replicas or mutate the stage externally during cleanup without adding distributed coordination. Secret rotation invalidates old reset tokens. Unsupported manually staged paths require administrator cleanup.
-
-## Connectivity And Costs
-
-The manifest mounts `SMART_CROWD_COUNTER_PG_SECRET` and `SMART_CROWD_COUNTER_PG_CA` from `CROWD_COUNTER_DB.CONFERENCES`. Postgres TLS verifies certificates and hostname. The dedicated `SMART_CROWD_COUNTER_PG_EAI` permits only its hostname on 5432. `SMART_CROWD_COUNTER_TILES_EAI` separately permits only `tile.openstreetmap.org:443`. Following explicit approval, this app uses OSM's current canonical hostname rather than the older parent-repository subdomain guidance. The proxy sends stable identification and an app-origin Referer, forwards no cookies/authorization/photo payloads, honors cache headers, and never caches errors. Visible attribution is retained; no prefetch or offline-download feature is provided.
-
-Postgres ingress permits administrative `64.124.17.42/32` and Snowflake regional egress ranges `153.45.58.0/24`, `153.45.68.0/24`. The latter are shared regional infrastructure, not app-exclusive. Their reported expiry is December 20, 2026; recheck `SYSTEM$GET_SNOWFLAKE_EGRESS_IP_RANGES()` and approve scoped policy updates before expiry. Do not widen to `0.0.0.0/0`. EAI egress does not replace Postgres ingress.
-
-Compute and storage are billable. With explicit approval, suspend the dedicated Postgres instance when not in use to stop compute charges; storage charges continue. Suspending it leaves photo analysis usable but locations unavailable. Resume it before expecting GPS writes. Do not automatically drop the instance, policies, secrets, staged photos or shared data during teardown.
-
-## Verify And Deploy
+### Verify and deploy
 
 ```sh
 npm test
 npm run build
-snow app validate --connection devrel-ent
-snow app deploy --connection devrel-ent
+snow app validate --connection YOUR_CONNECTION
+snow app deploy --connection YOUR_CONNECTION
 ```
 
-The manifest deploys `SNOWFLAKE_APPS.PUBLIC.SMART_CROWD_COUNTER` using `KAMESH_DEMOS_S`. Its runtime environment explicitly points to the data database/schema. Deployment is declarative: omitted service settings reset to defaults.
+Review [`app.yml`](app.yml) before deploying — it ships with example/placeholder values (database, warehouse, and for the Postgres variant, `PGHOST`) that must match your own Snowflake account's resources.
 
-Smoke checks: homepage, `/api/file-count`, and a static chunk must return HTTP 200. Photo upload, analysis and proxy retrieval should be checked with an approved conference photo.
+Smoke-check after deploy: the homepage, `/api/file-count`, and a static asset should all return HTTP 200. Then upload and analyze a real conference photo.
 
-The SDK's transitive `toml@3` dependency has outstanding high-severity audit findings, also attributed to `snowflake-sdk`. It processes trusted local configuration, not HTTP requests or uploaded photos. Review upstream fixes before production use; do not force an incompatible SDK downgrade.
+## API Routes
+
+| Route | Purpose |
+|---|---|
+| `POST /api/upload` | Validated multipart upload to the stage |
+| `GET /api/images` | Runs crowd/hands-up analysis (long-running) |
+| `GET /api/file-count` | Directory count, no AI calls |
+| `GET /api/stage-image?path=` | Decrypted, same-origin image proxy |
+| `POST /api/reset` | Clears the shared photo library (requires confirmation) |
+| `GET /api/locations` | GPS-only refresh, no Cortex calls |
+| `GET /api/tiles?z=&x=&y=` | Same-origin OpenStreetMap tile proxy |
+
+## V2 Location Storage
+
+This variant keeps GPS metadata in a dedicated Snowflake Postgres instance (`crowd_counter.session_locations`), keyed by fully-qualified stage + generated photo path, while photos and analysis stay entirely in Snowflake — Postgres never stores AI results. Malformed or missing GPS degrades gracefully; a failed metadata write never rolls back a successful photo upload.
+
+Networking for this variant uses two dedicated external access integrations — one scoped to the Postgres instance's hostname on port 5432, one scoped to `tile.openstreetmap.org:443` for the session map. TLS certificate and hostname verification is enforced on the Postgres connection; configure your own instance's ingress and egress ranges rather than reusing another deployment's.
+
+For local Postgres access:
+
+```sh
+psql "service=smart_crowd_counter_pg connect_timeout=10" -X -v ON_ERROR_STOP=1 -f scripts/setup-locations.sql
+python scripts/run-local.py --skill-dir <your-snowflake-postgres-skill-dir>
+```
+
+`run-local.py` reads your saved Postgres service profile and injects credentials/CA into the child process without writing a credential file to disk.
+
+## Costs and Limits
+
+- Each photo analysis costs Cortex credits (two Claude 4 Sonnet calls) and can take tens of seconds — there's no persistent results cache.
+- This is a shared demo: all app users see the same photo library, and a confirmed reset deletes it for everyone. Restrict access before use.
+- Counts are AI estimates, not attendance records — totals across photos aren't unique attendees, and hands-up percentage isn't a general engagement metric.
+- Compute and storage for the dedicated Postgres instance (v2) are billable; suspend it when idle to stop compute charges (storage charges continue).
+
+## Related
+
+- [smart-crowd-counter-demo](https://github.com/kameshsampath/smart-crowd-counter-demo) — the prompt-driven parent repo this app is generated from
+- [Snowflake App Runtime](https://docs.snowflake.com/en/developer-guide/snowflake-apps/about-snowflake-apps)
+- [Snowflake Cortex AI](https://docs.snowflake.com/en/guides-overview-ai-features)
+- [Cortex Code](https://docs.snowflake.com/en/user-guide/cortex-code/cortex-code)
+
+## License
+
+[Apache License 2.0](LICENSE)
