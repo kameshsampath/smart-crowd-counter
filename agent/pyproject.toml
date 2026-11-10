@@ -1,0 +1,23 @@
+[project]
+name = "smart-crowd-counter"
+version = "0.1.0"
+description = "The Smart Crowd Counter Agent"
+readme = "README.md"
+license = "Apache-2.0"
+authors = [{ name = "Kamesh Sampath" }]
+requires-python = ">=3.12"
+dependencies = [
+    "google-adk>=1.10.0",
+    "litellm>=1.60.0",
+    "fastapi>=0.115.0",
+    "uvicorn>=0.34.0",
+    "pydantic>=2.9.0",
+    "minio>=7.2.0",
+    "pillow>=11.0.0",
+]
+[project.scripts]
+smart-crowd-counter-agent = "smart_crowd_counter:main"
+
+[build-system]
+requires = ["uv_build>=0.13.7,<0.14.0"]
+build-backend = "uv_build"

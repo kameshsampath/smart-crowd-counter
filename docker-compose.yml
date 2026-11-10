@@ -1,0 +1,122 @@
+services:
+  aistor:
+    image: quay.io/minio/aistor/minio:latest
+    command: server /data --license /minio.license --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-minioadmin}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+      - ./minio.license:/minio.license:ro
+
+  aistor-init:
+    build:
+      context: ./docker
+      dockerfile: mc.Dockerfile
+    depends_on:
+      aistor:
+        condition: service_started
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-minioadmin}
+      APP_USER: ${S3_APP_USER:-crowd-counter}
+      APP_SECRET: ${S3_APP_SECRET:-crowd-counter-dev-secret}
+      PHOTOS_BUCKET: ${S3_PHOTOS_BUCKET:-snaps}
+      RESULTS_BUCKET: ${S3_RESULTS_BUCKET:-analysis}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        until mc alias set app http://aistor:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD" >/dev/null 2>&1 && mc ready app >/dev/null 2>&1; do
+          echo "aistor-init: waiting for aistor..."
+          sleep 2
+        done
+        mc mb --ignore-existing "app/$$PHOTOS_BUCKET" "app/$$RESULTS_BUCKET"
+        cat > /tmp/crowd-counter-policy.json <<EOF
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": ["s3:*"],
+              "Resource": [
+                "arn:aws:s3:::$$PHOTOS_BUCKET",
+                "arn:aws:s3:::$$PHOTOS_BUCKET/*",
+                "arn:aws:s3:::$$RESULTS_BUCKET",
+                "arn:aws:s3:::$$RESULTS_BUCKET/*"
+              ]
+            }
+          ]
+        }
+        EOF
+        mc admin policy create app crowd-counter /tmp/crowd-counter-policy.json || true
+        mc admin user remove app "$$APP_USER" >/dev/null 2>&1 || true
+        mc admin user add app "$$APP_USER" "$$APP_SECRET"
+        mc admin policy attach app crowd-counter --user "$$APP_USER"
+        echo "aistor-init: buckets and service user ready"
+
+  ollama:
+    image: ollama/ollama:latest
+    # GPU passthrough for Ollama (NVIDIA, Docker Desktop with WSL2 backend and GPU access enabled):
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-models:/root/.ollama
+
+  agent:
+    build: ./agent
+    environment:
+      OLLAMA_BASE_URL: ${COMPOSE_OLLAMA_URL:-http://ollama:11434}
+      OLLAMA_API_BASE: ${COMPOSE_OLLAMA_URL:-http://ollama:11434}
+      AGENT_MODEL: ${AGENT_MODEL:-qwen2.5vl:7b}
+      S3_ENDPOINT: aistor:9000
+      S3_ACCESS_KEY: ${S3_APP_USER:-crowd-counter}
+      S3_SECRET_KEY: ${S3_APP_SECRET:-crowd-counter-dev-secret}
+      S3_USE_TLS: "false"
+      S3_PHOTOS_BUCKET: ${S3_PHOTOS_BUCKET:-snaps}
+      S3_RESULTS_BUCKET: ${S3_RESULTS_BUCKET:-analysis}
+    ports:
+      - "8000:8000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      ollama:
+        condition: service_started
+      aistor-init:
+        condition: service_completed_successfully
+
+  web:
+    build: .
+    environment:
+      S3_ENDPOINT: aistor:9000
+      S3_ACCESS_KEY: ${S3_APP_USER:-crowd-counter}
+      S3_SECRET_KEY: ${S3_APP_SECRET:-crowd-counter-dev-secret}
+      S3_USE_TLS: "false"
+      S3_PHOTOS_BUCKET: ${S3_PHOTOS_BUCKET:-snaps}
+      S3_RESULTS_BUCKET: ${S3_RESULTS_BUCKET:-analysis}
+      AGENT_URL: http://agent:8000
+      AGENT_MODEL: ${AGENT_MODEL:-qwen2.5vl:7b}
+      RESET_SECRET: ${RESET_SECRET:-local-dev-reset-secret}
+    ports:
+      - "3000:3000"
+    depends_on:
+      aistor:
+        condition: service_started
+      aistor-init:
+        condition: service_completed_successfully
+      agent:
+        condition: service_started
+
+volumes:
+  minio-data:
+  ollama-models:

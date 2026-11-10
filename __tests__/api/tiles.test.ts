@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { GET, tileCoordinates } from "@/app/api/tiles/route"
+import { GET } from "@/app/api/tiles/route"
+import { tileCoordinates } from "@/lib/tiles"
 afterEach(() => vi.unstubAllGlobals())
 describe("tile proxy", () => {
     it("accepts valid tile coordinates only", () => {

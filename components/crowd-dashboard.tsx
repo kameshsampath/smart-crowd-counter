@@ -5,10 +5,11 @@ import dynamic from "next/dynamic"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { ArrowUpRight, Camera, Check, ChevronDown, Copy, Hand, ImagePlus, LoaderCircle, Moon, RefreshCw, Sun, Trash2, Upload, Users } from "lucide-react"
 import { useTheme } from "./theme-provider"
-import { imageExtension, MAX_FILES, MAX_IMAGE_BYTES, Photo, SQL_PATTERN, sumKnown } from "@/lib/crowd"
+import { exceedsMaxDimension, imageExtension, MAX_DIMENSION, MAX_FILES, MAX_IMAGE_BYTES, Photo, sumKnown } from "@/lib/crowd"
+import { PROMPT_PATTERN } from "@/lib/crowd"
 
 type FileInput = FileList | File[]
-type ImageResult = { photos: Photo[]; sql: string; locationWarning?: string | null }
+type ImageResult = { photos: Photo[]; prompt: string; analysisWarning?: string | null }
 const SessionMap = dynamic(() => import("./session-map"), { ssr: false, loading: () => <p role="status">Loading session map...</p> })
 const tips = ["Estimating visible attendees and raised hands.", "Generating a caption for each photo.", "AI estimates may miss people who are obscured.", "Each photo is analyzed independently."]
 const display = (value: number | null | undefined) => value == null ? "Unavailable" : value.toLocaleString()
@@ -19,6 +20,26 @@ async function fetchJson(url: string, options?: RequestInit) {
     const result = await response.json()
     if (!response.ok) throw new Error(result.error || "Request failed. Please retry.")
     return result
+}
+
+async function imageDimensions(file: File): Promise<{ width: number; height: number }> {
+    if (typeof createImageBitmap === "function") {
+        try {
+            const bitmap = await createImageBitmap(file)
+            const dimensions = { width: bitmap.width, height: bitmap.height }
+            bitmap.close()
+            return dimensions
+        } catch (_error) { /* fall back to Image below */ }
+    }
+    const url = URL.createObjectURL(file)
+    try {
+        return await new Promise<{ width: number; height: number }>((resolve, reject) => {
+            const image = new Image()
+            image.onload = () => resolve({ width: image.naturalWidth, height: image.naturalHeight })
+            image.onerror = () => reject(new Error("Could not read image dimensions."))
+            image.src = url
+        })
+    } finally { URL.revokeObjectURL(url) }
 }
 
 function PhotoImage({ photo, thumbnail = false }: { photo: Photo; thumbnail?: boolean }) {
@@ -78,7 +99,7 @@ export function CrowdDashboard() {
         try {
             const result = await count.refetch({ throwOnError: true })
             if ((result.data?.count ?? 0) > 0) await client.refetchQueries({ queryKey: ["images"], type: "all" }, { throwOnError: true })
-            else client.setQueryData<ImageResult>(["images"], { photos: [], sql: SQL_PATTERN })
+            else client.setQueryData<ImageResult>(["images"], { photos: [], prompt: PROMPT_PATTERN })
         } finally { setAnalyzing(false) }
     }
 
@@ -89,6 +110,17 @@ export function CrowdDashboard() {
         setError(null)
         if (files.length > MAX_FILES || files.some(file => !imageExtension(file.name) || file.size > MAX_IMAGE_BYTES || !file.size)) {
             setError("Choose up to 4 JPG, JPEG or PNG photos, each no larger than 3.75 MB.")
+            return
+        }
+        const oversized: string[] = []
+        for (const file of files) {
+            try {
+                const { width, height } = await imageDimensions(file)
+                if (exceedsMaxDimension(width, height)) oversized.push(`${file.name} is ${width}×${height} px`)
+            } catch (_error) { /* unreadable files are rejected by the server */ }
+        }
+        if (oversized.length) {
+            setError(`${oversized.join("; ")}. Max is ${MAX_DIMENSION.toLocaleString()} × ${MAX_DIMENSION.toLocaleString()} px.`)
             return
         }
         setUploading(true); setUploadCount(files.length); setProgress(0)
@@ -123,7 +155,7 @@ export function CrowdDashboard() {
             setResetToken(result.retryToken ?? null)
             setResetWarning(result.warning ?? null)
             if (result.photosCleared) {
-                client.setQueryData<ImageResult>(["images"], { photos: [], sql: SQL_PATTERN })
+                client.setQueryData<ImageResult>(["images"], { photos: [], prompt: PROMPT_PATTERN })
                 setSelectedPath(null)
                 setLocationWarning(null)
             }
@@ -137,7 +169,7 @@ export function CrowdDashboard() {
         try {
             const result = await fetchJson("/api/locations")
             client.setQueryData<ImageResult>(["images"], current => current ? {
-                ...current, locationWarning: result.locationWarning,
+                ...current, locationWarning: result.locationWarning ?? null,
                 photos: current.photos.map(photo => ({ ...photo, ...(result.locations.find((location: Photo) => location.path === photo.path) ?? {}) }))
             } : current)
         } catch (_error) { setLocationWarning("Location refresh failed. Photo analysis is unchanged.") }
@@ -145,14 +177,14 @@ export function CrowdDashboard() {
     }
 
     return <div className="app-shell">
-        <header className="topbar"><a className="brand" href="/"><img src="/icon.svg" alt="" width="36" height="36" /><span>Smart Crowd Counter<small>CONFERENCE PHOTO LAB</small></span></a><div className="header-actions"><span className="powered">Powered by Snowflake Cortex</span><button className="icon-button" aria-label={resolvedTheme === "dark" ? "Use light theme" : "Use dark theme"} onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}>{resolvedTheme === "dark" ? <Sun size={20} /> : <Moon size={20} />}</button></div></header>
+        <header className="topbar"><a className="brand" href="/"><img src="/icon.svg" alt="" width="36" height="36" /><span>Smart Crowd Counter<small>CONFERENCE PHOTO LAB</small></span></a><div className="header-actions"><span className="powered">Powered by Google ADK + Ollama</span><button className="icon-button" aria-label={resolvedTheme === "dark" ? "Use light theme" : "Use dark theme"} onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}>{resolvedTheme === "dark" ? <Sun size={20} /> : <Moon size={20} />}</button></div></header>
         <main>
             <section className="intro"><div><p className="eyebrow">A ROOM FULL OF INSIGHT</p><h1>Every photo tells<br />a crowd story.</h1><p className="intro-copy">Attendees, raised hands, and the moments in between.</p></div><div className="intro-mark" aria-hidden="true"><Users size={72} strokeWidth={1} /><ArrowUpRight size={28} /></div></section>
             <input ref={fileInput} className="sr-only" type="file" multiple accept=".jpg,.jpeg,.png,.JPG,.JPEG,.PNG" aria-label="Select conference photos" onChange={event => { if (event.target.files) void upload(event.target.files) }} />
             <button className={`dropzone ${dragging ? "dragging" : ""}`} disabled={busy} onClick={() => fileInput.current?.click()} onDragOver={event => { event.preventDefault(); if (!busy) setDragging(true) }} onDragLeave={() => setDragging(false)} onDrop={event => { event.preventDefault(); setDragging(false); void upload(event.dataTransfer.files) }}>
                 <span className="upload-symbol"><Upload size={25} /></span><span className="drop-copy"><strong>Drop your session photos here</strong><span>JPG / JPEG / PNG · Up to 4 at once · 3.75 MB each · Max 8000 × 8000 px</span></span><span className="browse">Browse photos <ImagePlus size={18} /></span>
             </button>
-            {busy && <section className="status-banner" role="status" aria-live="polite"><LoaderCircle className="spin" size={20} /><div><strong>{isResetting ? "Clearing photos..." : isUploading ? `Uploading ${uploadCount} photos... ${progress}%` : `Analyzing photos... ${elapsed}s`}</strong><p>{isResetting ? "Clearing the shared stage and refreshing the directory." : isUploading ? progress === 100 ? "Transferring photos into Snowflake..." : "Sending photos securely to Snowflake." : tips[Math.floor(elapsed / 8) % tips.length]}</p></div>{isUploading && <progress max="100" value={progress} aria-label="Upload progress" />}</section>}
+            {busy && <section className="status-banner" role="status" aria-live="polite"><LoaderCircle className="spin" size={20} /><div><strong>{isResetting ? "Clearing photos..." : isUploading ? `Uploading ${uploadCount} photos... ${progress}%` : `Analyzing photos... ${elapsed}s`}</strong><p>{isResetting ? "Clearing the shared photo library." : isUploading ? progress === 100 ? "Storing photos in MinIO..." : "Sending photos securely to MinIO." : tips[Math.floor(elapsed / 8) % tips.length]}</p></div>{isUploading && <progress max="100" value={progress} aria-label="Upload progress" />}</section>}
             {(error || count.error || images.error) && <section className="error-banner" role="alert"><span>{error || count.error?.message || images.error?.message}</span><button className="icon-button" aria-label="Retry loading photos" disabled={busy} onClick={() => { setError(null); void refreshAnalysis().catch(problem => setError(problem.message)) }}><RefreshCw size={18} /></button></section>}
             <section className="metrics-strip" aria-label="Photo summary">
                 <div><span><Camera size={17} /> Photos</span><strong>{count.isPending ? "..." : count.error ? "Unavailable" : display(count.data?.count ?? 0)}</strong><small>In the shared collection</small></div>
@@ -167,11 +199,11 @@ export function CrowdDashboard() {
             </section>}
             {resetWarning && <section className="error-banner" role="alert">{resetWarning}<button className="secondary-button" disabled={busy} onClick={() => void reset()}>Retry cleanup</button></section>}
             <section className="map-section"><div className="section-heading"><h2>Session map</h2><button className="icon-button" aria-label="Refresh locations only" disabled={locationsLoading || busy} onClick={() => void refreshLocations()}><RefreshCw size={18} /></button></div>
-                {(locationWarning || images.data?.locationWarning) && <p className="error-banner" role="alert">{locationWarning || images.data?.locationWarning}</p>}
+                {(locationWarning || images.data?.analysisWarning) && <p className="error-banner" role="alert">{locationWarning || images.data?.analysisWarning}</p>}
                 {locationsLoading || analyzing ? <p role="status">Loading locations...</p> : <SessionMap photos={photos} selectedPath={selected?.path} onSelect={setSelectedPath} />}
             </section>
-            <details className="under-hood"><summary><span>Under the hood</span><ChevronDown size={18} /></summary><div className="code-columns"><section><div className="code-heading"><h3>Analysis SQL pattern</h3><CopyButton text={images.data?.sql || SQL_PATTERN} /></div><pre>{images.data?.sql || SQL_PATTERN}</pre></section><section><div className="code-heading"><h3>Selected result</h3>{selected && <CopyButton text={JSON.stringify(selected, null, 2)} />}</div><pre>{selected ? JSON.stringify(selected, null, 2) : "No photo selected."}</pre></section></div></details>
-            <footer><span>SMART CROWD COUNTER</span><span>Snowflake Cortex AI / Claude 4 Sonnet</span></footer>
+            <details className="under-hood"><summary><span>Under the hood</span><ChevronDown size={18} /></summary><div className="code-columns"><section><div className="code-heading"><h3>Agent analysis pattern</h3><CopyButton text={images.data?.prompt || PROMPT_PATTERN} /></div><pre>{images.data?.prompt || PROMPT_PATTERN}</pre></section><section><div className="code-heading"><h3>Selected result</h3>{selected && <CopyButton text={JSON.stringify(selected, null, 2)} />}</div><pre>{selected ? JSON.stringify(selected, null, 2) : "No photo selected."}</pre></section></div></details>
+            <footer><span>SMART CROWD COUNTER</span><span>Google ADK / Ollama Vision</span><span>© 2026 Kamesh Sampath · Apache-2.0</span></footer>
         </main>
         <dialog ref={confirmation} className="confirm-dialog"><h2>Clear all session photos?</h2><p>This permanently removes every photo from the shared collection for all app users. This cannot be undone.</p><div><button className="secondary-button" autoFocus onClick={() => confirmation.current?.close()}>Cancel</button><button className="primary-button destructive" onClick={() => void reset()}><Trash2 size={17} /> Clear all photos</button></div></dialog>
     </div>
