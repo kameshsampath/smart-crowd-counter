@@ -1,4 +1,4 @@
-// `output: "standalone"` is required for Docker/SPCS deployment.
+// `output: "standalone"` is required for Docker deployment.
 // `images.unoptimized` avoids needing the sharp package.
 //
 // `turbopack.root` and `outputFileTracingRoot` are pinned to this app's
@@ -19,6 +19,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const nextConfig = {
   output: 'standalone',
   outputFileTracingRoot: __dirname,
+  // exifr probes for optional Node built-ins (fs, zlib) with dynamic imports,
+  // which bundling breaks ("Couldn't load fs/zlib"). Load it from node_modules.
+  serverExternalPackages: ["exifr"],
   turbopack: {
     root: __dirname,
   },

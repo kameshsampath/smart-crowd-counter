@@ -1,7 +1,12 @@
 {
-  "name": "snowflake-nextjs-app",
+  "name": "smart-crowd-counter",
   "version": "0.1.0",
   "private": true,
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=24.14.1"
+  },
+  "author": "Kamesh Sampath",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -19,25 +24,21 @@
     "leaflet": "^1.9.4",
     "lucide-react": "^1.31.0",
     "next": "^16.3.0",
-    "pg": "^8.23.0",
     "postcss": "^8.5.15",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-leaflet": "^5.0.0",
     "server-only": "^0.0.1",
     "sharp": "^0.35.4",
-    "snowflake-sdk": "^3.1.0",
     "tailwind-merge": "^3.6.0",
-    "tailwindcss": "^4.3.3"
+    "tailwindcss": "^4.3.3",
+    "minio": "^8.0.5"
   },
   "devDependencies": {
     "@types/leaflet": "^1.9.22",
     "@types/node": "^26.2.0",
-    "@types/pg": "^8.23.1",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
-    "@types/snowflake-sdk": "^1.6.24",
-    "smol-toml": "^1.7.1",
     "typescript": "^7.0.2",
     "vitest": "^4.1.10"
   },

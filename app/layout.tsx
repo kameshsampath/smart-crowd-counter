@@ -7,7 +7,7 @@ import "./globals.css"
 
 export const metadata: Metadata = {
   title: APP_TITLE,
-  description: "Conference photos, attendee estimates and hands-up counts powered by Snowflake Cortex AI.",
+  description: "Conference photos, attendee estimates and hands-up counts powered by a local Google ADK agent and Ollama vision model.",
   icons: { icon: LOGO_SRC },
 }
 

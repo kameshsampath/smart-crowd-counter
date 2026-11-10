@@ -1,0 +1,17 @@
+# Keep the web image build hermetic: no host dependencies, build output, or secrets.
+.git
+node_modules
+.next
+out
+build
+.env*
+!.env.example
+.minio-data
+.bin
+agent/.venv
+__pycache__
+minio.license
+minio.exe
+mc.exe
+*.log
+.DS_Store

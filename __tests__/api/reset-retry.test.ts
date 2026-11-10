@@ -1,36 +1,42 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
-vi.mock("@/lib/snowflake", () => ({ querySnowflake: vi.fn(), getSecret: () => ({ password: "test-only" }), SecretType: { PASSWORD: "PASSWORD" } }))
-vi.mock("@/lib/locations", () => ({ clearLocations: vi.fn() }))
-import { querySnowflake } from "@/lib/snowflake"
-import { clearLocations } from "@/lib/locations"
+
+const storage = vi.hoisted(() => ({
+    listPhotos: vi.fn(),
+    deletePhoto: vi.fn(),
+}))
+vi.mock("server-only", () => ({}))
+vi.mock("@/lib/storage", () => ({ ...storage, PHOTOS_BUCKET: "snaps", RESULTS_BUCKET: "analysis" }))
+
 import { POST } from "@/app/api/reset/route"
-import { readReset } from "@/lib/reset-token"
+import { readReset } from "@//lib/reset-token"
+
 function request(retryToken?: string) {
     return new Request("http://localhost/api/reset", { method: "POST", headers: { "x-crowd-action": "1" }, body: JSON.stringify({ confirm: "CLEAR ALL PHOTOS", retryToken }) })
 }
+
 beforeEach(() => vi.clearAllMocks())
+
 describe("reset recovery", () => {
-    it("retries only the original snapshot after metadata failure", async () => {
-        vi.mocked(querySnowflake).mockResolvedValue([]).mockResolvedValueOnce([{ RELATIVE_PATH: "original.jpg" }])
-        vi.mocked(clearLocations).mockRejectedValueOnce(new Error("offline")).mockResolvedValue(undefined)
+    it("retries only the original snapshot after a partial failure", async () => {
+        storage.listPhotos.mockResolvedValue([{ path: "original.jpg", size: 1, modified: new Date() }])
+        storage.deletePhoto.mockRejectedValueOnce(new Error("offline")).mockResolvedValue(undefined)
         const first = await (await POST(request())).json()
-        expect(first.photosCleared).toBe(true)
         expect(first.cleared).toBe(false)
+        expect(first.retryToken).toBeTruthy()
         expect(readReset(first.retryToken).paths).toEqual(["original.jpg"])
-        const cutoff = vi.mocked(clearLocations).mock.calls[0][0]
-        vi.mocked(querySnowflake).mockClear()
+        storage.listPhotos.mockClear()
         const retry = await (await POST(request(first.retryToken))).json()
         expect(retry.cleared).toBe(true)
-        expect(querySnowflake).toHaveBeenCalledTimes(2)
-        expect(querySnowflake).toHaveBeenNthCalledWith(1, expect.stringContaining("original.jpg"))
-        expect(clearLocations).toHaveBeenLastCalledWith(cutoff)
+        expect(storage.listPhotos).not.toHaveBeenCalled()
+        expect(storage.deletePhoto).toHaveBeenCalledTimes(2)
+        expect(storage.deletePhoto).toHaveBeenNthCalledWith(2, "original.jpg")
     })
-    it("does not erase metadata when stage removal fails", async () => {
-        vi.mocked(querySnowflake).mockResolvedValueOnce([{ RELATIVE_PATH: "old.jpg" }]).mockRejectedValueOnce(new Error("offline"))
+    it("returns a retry token when nothing was deleted", async () => {
+        storage.listPhotos.mockResolvedValue([{ path: "old.jpg", size: 1, modified: new Date() }])
+        storage.deletePhoto.mockRejectedValue(new Error("offline"))
         const result = await (await POST(request())).json()
         expect(result.cleared).toBe(false)
         expect(result.retryToken).toBeTruthy()
-        expect(clearLocations).not.toHaveBeenCalled()
     })
     it("rejects tampered reset snapshots", () => {
         expect(() => readReset("e30.invalid")).toThrow()
