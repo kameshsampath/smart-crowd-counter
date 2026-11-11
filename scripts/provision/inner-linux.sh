@@ -124,15 +124,26 @@ run_as_user "$TARGET_USER" podman info --format 'rootless={{.Host.Security.Rootl
 log "rootless headless Podman OK ($(run_as_user "$TARGET_USER" podman --version))"
 
 # --- 7. gateway config (podman driver) + readiness ---------------------------
+# WSL2: the supervisor's trusted destination for host.openshell.internal must be
+# the Windows host address reachable from WSL - the default-route IP, which is
+# the vEthernet (WSL) adapter IP on the Windows side (e.g. 172.23.208.1).
+# Left empty on plain Linux the driver uses supervisor loopback (the host).
+# Verified: Windows DNS (10.255.255.254) is NOT reachable for host services
+# from WSL; the default-route IP is (MinIO :9000 answers there).
 USER_HOME="/home/$TARGET_USER"
+GW_IP=""
+if [ "$IS_WSL" -eq 1 ]; then
+  GW_IP="$(ip route | awk '/^default/{print $3; exit}')"
+  [ -n "$GW_IP" ] || die "WSL2: could not detect the Windows host gateway IP (default route)"
+  log "WSL2: host.openshell.internal -> host_gateway_ip=$GW_IP (Windows vEthernet (WSL) adapter)"
+fi
 install -d -o "$TARGET_USER" -g "$TARGET_USER" "$USER_HOME/.config/openshell"
-cat > "$USER_HOME/.config/openshell/gateway.toml" <<'EOF'
-[openshell]
-version = 2
-
-[openshell.gateway]
-compute_driver = "podman"
-EOF
+{
+  printf '[openshell]\nversion = 2\n\n[openshell.gateway]\ncompute_driver = "podman"\n'
+  if [ -n "$GW_IP" ]; then
+    printf '\n[openshell.drivers.podman]\nhost_gateway_ip = "%s"\n' "$GW_IP"
+  fi
+} > "$USER_HOME/.config/openshell/gateway.toml"
 chown "$TARGET_USER:$TARGET_USER" "$USER_HOME/.config/openshell/gateway.toml"
 run_as_user "$TARGET_USER" openshell-gateway config preflight --path "$USER_HOME/.config/openshell/gateway.toml"
 

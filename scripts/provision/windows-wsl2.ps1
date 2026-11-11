@@ -65,6 +65,36 @@ Upsert-SectionKeys $out "experimental" @("autoMemoryReclaim=gradual")
 Set-Content -Path $wslconfigPath -Value $out -Encoding ASCII
 Write-Log "wrote $wslconfigPath ([wsl2] memory=${capGb}GB processors=$procs swap=8GB; [experimental] autoMemoryReclaim=gradual)"
 
+# --- host services reachable from WSL (Ollama on 0.0.0.0 + firewall) -------
+# The sandboxed agent reaches host-local services via host.openshell.internal,
+# which the podman driver maps to host_gateway_ip (the vEthernet (WSL) adapter
+# IP). Ollama must listen on all interfaces and the Windows firewall must
+# allow the WSL subnet on 11434 (Ollama) and 9000 (MinIO AIStor).
+[Environment]::SetEnvironmentVariable("OLLAMA_HOST", "0.0.0.0", "User")
+$wslSubnet = "172.23.208.0/20"   # vEthernet (WSL) /20; recompute if the host IP changes
+try {
+    $wslIp = (Get-NetIPAddress -AddressFamily IPv4 -InterfaceAlias 'vEthernet (WSL*' -ErrorAction Stop | Select-Object -First 1)
+    if ($wslIp) { $wslSubnet = "$($wslIp.IPAddress)/$($wslIp.PrefixLength)" }
+} catch { }
+foreach ($port in 11434, 9000) {
+    New-NetFirewallRule -DisplayName "OpenShell demo: port $port from WSL" -Direction Inbound `
+        -Protocol TCP -LocalPort $port -RemoteAddress $wslSubnet -Action Allow -ErrorAction SilentlyContinue | Out-Null
+}
+# If Ollama is running but not bound to all interfaces, restart it so it picks up OLLAMA_HOST.
+$listening = Get-NetTCPConnection -LocalPort 11434 -ErrorAction SilentlyContinue |
+    Where-Object { $_.LocalAddress -in @('::', '0.0.0.0') -and $_.State -eq 'Listen' }
+if (-not $listening) {
+    Write-Log "restarting Ollama with OLLAMA_HOST=0.0.0.0 so the sandbox can reach host.openshell.internal:11434"
+    Get-Process | Where-Object { $_.ProcessName -like '*ollama*' } | Stop-Process -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Seconds 2
+    $ollama = "$env:LOCALAPPDATA\Programs\Ollama\ollama.exe"
+    if (Test-Path $ollama) {
+        $env:OLLAMA_HOST = "0.0.0.0"
+        Start-Process -FilePath $ollama -ArgumentList "serve" -WindowStyle Hidden
+        Start-Sleep -Seconds 6
+    }
+}
+
 # --- VRAM check (warn < 6 GB free; qwen2.5vl:7b Q4 needs ~5.5 GB) ------------
 if (Get-Command nvidia-smi -ErrorAction SilentlyContinue) {
     $free = (nvidia-smi --query-gpu=memory.free --format=csv,noheader,nounits | Select-Object -First 1)
