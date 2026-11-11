@@ -52,3 +52,4 @@ mc.exe
 .bin/
 .venv
 .vscode
+/dist/
