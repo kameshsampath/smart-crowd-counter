@@ -13,6 +13,8 @@ A local, self-contained AI app: Next.js frontend/API, MinIO AIStor (Free tier, s
 | `docker compose up --build -d` | Full stack: web, agent, AIStor, Ollama (requires `./minio.license`) |
 | `docker compose exec ollama ollama pull qwen2.5vl:7b` | Pull the default vision model |
 | `.\scripts\dev.ps1` / `./scripts/dev.sh` | Run full stack locally without Docker (Windows PowerShell / WSL2 & POSIX) |
+| `uv sync --project docs` | Install the docs toolchain (uv project in `docs/`, MkDocs Material) |
+| `uv run --project docs mkdocs serve` / `mkdocs build` | Preview / build the docs site (`mkdocs.yaml`, pages in `docs/`) |
 
 ## Project Structure
 
@@ -23,6 +25,7 @@ A local, self-contained AI app: Next.js frontend/API, MinIO AIStor (Free tier, s
 - `scripts/` — `dev.ps1` (Windows PowerShell) and `dev.sh` (WSL2/Linux/macOS) one-command local stack launchers
 - `components/` — React UI components
 - `__tests__/` — vitest suites for API routes and lib modules
+- `docs/` — MkDocs documentation site (config in `mkdocs.yaml` at the repo root); also holds the OpenShell design notes and walkthrough
 
 ## Conventions
 

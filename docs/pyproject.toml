@@ -1,0 +1,17 @@
+# Copyright 2026 Kamesh Sampath
+# Licensed under the Apache License, Version 2.0
+[project]
+name = "smart-crowd-counter-docs"
+version = "0.1.0"
+description = "Documentation site for the Smart Crowd Counter (MkDocs Material)"
+license = "Apache-2.0"
+authors = [{ name = "Kamesh Sampath" }]
+requires-python = ">=3.12"
+dependencies = [
+    "mkdocs>=1.6.1,<2.0.0",
+    "mkdocs-material>=9.6.7,<10.0.0",
+    "watchdog>=6.0.0",
+]
+
+[tool.uv]
+package = false

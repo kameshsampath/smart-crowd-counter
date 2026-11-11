@@ -1,0 +1,77 @@
+# Copyright 2026 Kamesh Sampath
+# Licensed under the Apache License, Version 2.0
+site_name: "Smart Crowd Counter"
+site_url: https://kameshsampath.github.io/smart-crowd-counter/
+site_description: >
+  Local, self-contained AI crowd counting: upload session photos and get
+  attendee and raised-hand estimates from a local Ollama vision model via a
+  Google ADK agent, with photos stored in MinIO AIStor.
+docs_dir: docs
+exclude_docs: |
+  requirements.txt
+  pyproject.toml
+  .venv/
+extra_css:
+  - stylesheets/extra.css
+theme:
+  name: material
+  palette:
+    primary: white
+  font: false
+  features:
+    - content.code.copy
+    - content.code.select
+    - content.code.annotate
+    - navigation.instant
+    - navigation.instant.progress
+    - navigation.tracking
+    - navigation.footer
+    - toc.follow
+nav:
+  - "Overview": index.md
+  - "Quickstart": quickstart.md
+  - "Environment Setup": setup.md
+  - "Run with Docker": docker.md
+  - "Architecture": architecture.md
+  - "Running the Demo": demo.md
+  - "API Reference": api.md
+  - "Storage and Data Model": storage.md
+  - "Governed Agent (OpenShell)":
+      - "Design Notes": openshell.md
+      - "Demo Walkthrough": governed-agent.md
+      - "Security Intent (IDD)": idd/part-1-openshell-security.idd.md
+  - "Troubleshooting": troubleshooting.md
+  - "Building These Docs": documentation.md
+markdown_extensions:
+  - toc:
+      baselevel: 1
+      permalink: "&para;"
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+      use_pygments: true
+  - pymdownx.betterem
+  - pymdownx.caret
+  - pymdownx.mark
+  - pymdownx.tilde
+  - pymdownx.details
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - tables
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+plugins:
+  - search

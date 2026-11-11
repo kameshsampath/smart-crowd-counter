@@ -53,3 +53,6 @@ mc.exe
 .venv
 .vscode
 /dist/
+
+# mkdocs
+/site/
