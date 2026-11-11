@@ -41,6 +41,12 @@ Both scripts read `.env` (created from `.env.example` on first run), download th
 
 Open http://localhost:3000 and upload a photo.
 
+To run the agent inside an NVIDIA OpenShell sandbox instead (policy-as-code,
+placeholder credentials, deny evidence), use the additive governed path:
+`AGENT_MODEL=qwen2.5vl:3b scripts/dev-governed.sh` — see
+[Why OpenShell](#why-openshell-governed-mode-optional) and
+[docs/governed-agent.md](docs/governed-agent.md).
+
 | Service | URL |
 |---|---|
 | Web app | http://localhost:3000 |
@@ -96,6 +102,79 @@ flowchart LR
     A -->|"ollama_chat"| O["Ollama :11434"]
     O --> V["vision model<br/>default qwen2.5vl:7b"]
 ```
+
+## Why OpenShell (governed mode, optional)
+
+By default the agent runs as a plain local process with real S3 credentials in
+its environment — fine for a demo, not fine when the agent is an LLM that reads
+files and makes network calls. [NVIDIA OpenShell](https://github.com/NVIDIA/OpenShell)
+puts the agent in a sandbox with policy-as-code: default-deny network egress,
+Landlock filesystem allowlists, a non-root identity, and credentials that never
+reach the workload.
+
+Run it with `scripts/dev-governed.sh` (see [docs/governed-agent.md](docs/governed-agent.md)
+for the full walkthrough). On Windows this is a **native Windows + WSL2 combo**:
+the Windows host runs Ollama (CUDA), MinIO AIStor and Next.js; a WSL2 distro
+(`smart-crowd-counter`, imported from a golden tar) runs only the OpenShell
+gateway, rootless Podman, and the sandboxed agent.
+
+```mermaid
+flowchart LR
+    subgraph WIN["Windows host (native)"]
+        B["Browser"] --> W["Next.js :3000"]
+        M["MinIO AIStor :9000"]
+        O["Ollama CUDA :11434"]
+    end
+    subgraph WSL["WSL2 distro 'smart-crowd-counter'"]
+        GW["OpenShell gateway"]
+        POD["rootless Podman"]
+        subgraph SB["OpenShell sandbox — policy-as-code"]
+            A["ADK agent<br/>env: placeholders only"]
+        end
+    end
+    W -->|"POST /analyze"| A
+    A -->|"host.openshell.internal:11434"| O
+    A -->|"host.openshell.internal:9000<br/>SigV4 signed gateway-side"| M
+    GW -.->|"policy + providers + OCSF logs"| SB
+    POD -.->|"runs the boundary"| SB
+```
+
+Before/after trust story:
+| | Default (`dev.sh` / `dev.ps1`) | Governed (`dev-governed.sh`) |
+|---|---|---|
+| Agent network | anything the machine can reach | only `host.openshell.internal:11434` (Ollama) and `:9000` (AIStor) |
+| Agent filesystem | the whole distro/host user space | Landlock allowlist (`/usr`, `/etc`, `/sandbox`, `/tmp`); `/.openshell` protected |
+| Agent identity | your user | uid 1500 `sandbox`, non-root |
+| S3 credentials in agent env | real service-account keys | opaque `openshell:resolve:env:...` placeholders; the gateway re-signs SigV4 and the workload never sees the secret |
+| Evidence | none | OCSF deny log lines, `openshell policy get --full`, CI schema-conformance test |
+
+The web app's contract is unchanged (`POST /analyze {path}`); the agent remains
+the only LLM boundary.
+
+## Practical applications
+
+Every application below is the same loop: field workers capture photos, drop
+them into object storage, and the governed agent analyzes them — counts are
+estimates, not records.
+
+- **Industrial / factory floor inspections** — safety walkthroughs count PPE
+  compliance, blocked exits, and occupancy per zone from site photos.
+- **Airport & security-post inspections** — queue lengths, crowd density at
+  gates and checkpoints, and raised-hand counts during briefings.
+- **Smart-city infrastructure** — lamp posts, utility boxes and public works
+  photographed on rounds; the agent flags damage and estimates crowd presence
+  at public spaces.
+- **Field service & insurance claims** — adjusters photograph damage; the agent
+  produces structured summaries and rough counts (vehicles, affected rooms).
+- **Event / conference analytics** — the current demo: attendee and
+  raised-hand estimates per session photo, with a GPS session map.
+
+## Roadmap
+
+- **Inbox processing (next)**: photos land in `snaps/inbox/` and the governed
+  agent validates, processes, and files them automatically — no upload UI
+  needed. Planned as a watch-triggered tool-using agent behind the same sandbox
+  boundary.
 
 ## API flow
 
@@ -184,6 +263,7 @@ To see what is stored, sign in to the AIStor console at http://localhost:9001 wi
 - [sharp](https://sharp.pixelplumbing.com/) - image validation
 - [Leaflet](https://leafletjs.com/) and [OpenStreetMap](https://www.openstreetmap.org/) - session map and tiles
 - [smart-crowd-counter-demo](https://github.com/kameshsampath/smart-crowd-counter-demo) - the prompt-driven parent repo
+- [NVIDIA OpenShell](https://github.com/NVIDIA/OpenShell) and its [docs](https://docs.nvidia.com/openshell/latest/) - the sandbox runtime used in governed mode (design notes: [docs/openshell.md](docs/openshell.md), walkthrough: [docs/governed-agent.md](docs/governed-agent.md))
 - [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0) - license text
 
 ## License
