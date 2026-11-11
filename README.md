@@ -6,25 +6,20 @@
 ![Next.js](https://img.shields.io/badge/Next.js-16-00000?logo=next.js)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)
 [![Docker](https://img.shields.io/badge/docker-compose-2496ED?logo=docker)](docker-compose.yml)
+[![Docs](https://img.shields.io/badge/docs-Material%20for%20MkDocs-526CDE?logo=mkdocs)](https://kameshsampath.github.io/smart-crowd-counter/)
 
-Upload conference session photos and get estimates of attendee count, raised hands, and a caption for each photo. Everything runs on your own machine: a Google ADK agent calls a local Ollama vision model, and photos are stored in MinIO AIStor. An optional map shows where each photo was taken, using EXIF GPS.
+Upload conference session photos and get estimates of attendee count, raised
+hands, and a caption for each photo. Everything runs on your own machine: a
+Google ADK agent calls a local Ollama vision model, and photos are stored in
+MinIO AIStor. An optional map shows where each photo was taken, using EXIF GPS.
 
-## Run locally (recommended)
+Counts are AI estimates, not attendance records — treat them as rough.
 
-Use the launcher scripts. They suit machines with less RAM than Docker needs, because no VM runs.
+## Quickstart
 
-Prerequisites:
-
-- A free single-node AIStor license saved as `minio.license` in the repo root. Get it from the [MinIO pricing page](https://min.io/pricing) (free tier).
-- [Ollama](https://ollama.com/) installed, with one vision model pulled:
-
-  ```sh
-  ollama pull qwen2.5vl:7b   # ~5 GB. Use qwen2.5vl:3b on low-RAM machines (~3.5 GB)
-  ```
-
-- [uv](https://docs.astral.sh/uv/) and Node.js 24 LTS (v24.14.1, pinned in `.nvmrc`; `package.json` enforces `>=24.14.1`).
-
-Then run the launcher for your platform:
+Prerequisites: a free single-node AIStor license at `./minio.license`
+([pricing page](https://min.io/pricing)), [Ollama](https://ollama.com/) with
+`ollama pull qwen2.5vl:7b`, [uv](https://docs.astral.sh/uv/), and Node.js 24 LTS.
 
 ```powershell
 # Windows PowerShell (lowest RAM, no VM overhead)
@@ -37,154 +32,40 @@ chmod +x scripts/dev.sh
 ./scripts/dev.sh
 ```
 
-Both scripts read `.env` (created from `.env.example` on first run), download the MinIO server and client into `.bin/`, create the `snaps` and `analysis` buckets, create the scoped `crowd-counter` service user, and start the ADK agent and the Next.js app.
+Open http://localhost:3000 and upload a photo. With Docker (needs 16 GB RAM for
+the VM): `docker compose up --build -d`, then
+`docker compose exec ollama ollama pull qwen2.5vl:7b`.
 
-Open http://localhost:3000 and upload a photo.
+## Documentation
 
-| Service | URL |
+Full docs are published at <https://kameshsampath.github.io/smart-crowd-counter/>
+([MkDocs Material](https://squidfunk.github.io/mkdocs-material/), built from
+`mkdocs.yaml` + `docs/` and deployed by CI on push to `main`).
+
+Preview the local site at <http://127.0.0.1:8080>:
+
+```sh
+uv sync --project docs
+uv run --project docs mkdocs serve -a 127.0.0.1:8080
+```
+
+## Develop locally
+
+All build, run, and test commands (the one-command full stack stays the
+launcher scripts in Quickstart above):
+
+| Command | Purpose |
 |---|---|
-| Web app | http://localhost:3000 |
-| Agent health | http://localhost:8000/health |
-| AIStor console | http://localhost:9001 (`minioadmin` / `minioadmin`) |
-
-GPU: AIStor does not use a GPU. Object storage is CPU and I/O bound, so a GPU machine gains nothing there. The GPU matters for Ollama. When Ollama runs on the host (the launcher scripts above), its native Windows, Linux, and macOS builds use an NVIDIA GPU (CUDA) or Apple Metal automatically; run `ollama ps` to see the GPU share. In Docker, enable GPU access in Docker Desktop (WSL2 backend) and uncomment the `deploy.resources.reservations` block on the `ollama` service in `docker-compose.yml`.
-
-### Manual local setup
-
-If you prefer to start each service yourself:
-
-1. Start AIStor with `MINIO_ROOT_USER` and `MINIO_ROOT_PASSWORD` set:
-   `minio server .minio-data --license minio.license --console-address ":9001"`
-2. Provision storage with `mc`: set an alias, run `mc mb --ignore-existing local/snaps local/analysis`, then create the `crowd-counter` policy and service user exactly as `scripts/dev.sh` does.
-3. Start the agent: `cd agent && uv sync && uv run smart-crowd-counter-agent` with `OLLAMA_BASE_URL` and `AGENT_MODEL` set.
-4. Start the web app: `npm ci && npm run dev` with `S3_ENDPOINT`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, and `AGENT_URL` set. See `.env.example`.
-
-## Run with Docker (needs 16 GB RAM for Docker)
-
-Use Docker only if you can give Docker 16 GB of RAM. On Windows, use Docker Desktop with the WSL2 backend and set the VM memory in `%USERPROFILE%\.wslconfig`:
-
-```ini
-[wsl2]
-memory=16GB
-processors=8
-autoMemoryReclaim=gradual
-```
-
-Then run `wsl --shutdown` to apply. Defaults are fine on Linux and macOS.
-
-```sh
-git clone https://github.com/kameshsampath/smart-crowd-counter.git
-cd smart-crowd-counter
-docker compose up --build -d
-docker compose exec ollama ollama pull qwen2.5vl:7b   # once, ~5 GB
-```
-
-The `aistor-init` job waits for AIStor, creates the `snaps` and `analysis` buckets, and provisions the `crowd-counter` service user. The web app uses that user, not the root credentials.
-
-To run Ollama on the host instead of in a container, set `COMPOSE_OLLAMA_URL=http://host.docker.internal:11434` in `.env`. The agent resolves `host.docker.internal` through the `host-gateway` mapping (built in on Windows and macOS, declared for Linux in `docker-compose.yml`).
-
-No AIStor license yet? Point `S3_ENDPOINT` at any S3-compatible store, for example community MinIO. The app only uses the S3 API.
-
-## Architecture
-
-```mermaid
-flowchart LR
-    B["Browser"] -->|"HTTP"| W["Next.js web app :3000"]
-    W -->|"S3 API"| M["MinIO AIStor :9000<br/>snaps + analysis buckets"]
-    W -->|"POST /analyze"| A["ADK agent :8000"]
-    A -->|"S3 GET photo"| M
-    A -->|"ollama_chat"| O["Ollama :11434"]
-    O --> V["vision model<br/>default qwen2.5vl:7b"]
-```
-
-## API flow
-
-```mermaid
-sequenceDiagram
-    participant B as Browser
-    participant W as Next.js
-    participant S as AIStor (S3)
-    participant A as ADK agent
-    participant O as Ollama
-    B->>W: POST /api/upload (photos)
-    W->>S: PUT photo, EXIF GPS as object metadata
-    W-->>B: uploaded paths + locationWarning
-    B->>W: GET /api/images
-    W->>S: list photos, read cached results
-    W->>A: POST /analyze (uncached photo paths)
-    A->>S: GET photo bytes
-    A->>O: vision model call
-    O-->>A: JSON: attendees, hands, caption
-    A-->>W: analysis
-    W->>S: cache result in analysis bucket
-    W-->>B: dashboard JSON
-```
-
-## Features
-
-- Upload JPG, JPEG, or PNG photos, up to 4 at a time, 3.75 MB and 8000 x 8000 px each. Oversized photos are rejected in the browser before upload.
-- Per-photo attendee and raised-hand estimates and a caption, from one vision-model call per photo. Results are cached, so repeat views are free.
-- Dashboard with a hands-up donut chart and light and dark themes.
-- Session map with GPS pins from EXIF, linked back to the source photo.
-- Shared photo library with a confirmed reset flow. A retry token protects cleanup against partial failures.
-
-## GPS and the session map
-
-Map pins come from EXIF GPS in the photo. Converting HEIC to JPG often drops the location. Many converters strip EXIF, and iPhone Share > Options > Location: off removes it on purpose. Check a file directly:
-
-```sh
-node scripts/check-gps.mjs path/to/photo.jpg
-```
-
-If `gps` is `null`, re-export the photo with location included. Uploads also return a warning ("N of M photos had no GPS location..."), so missing pins are never silent.
-
-## Verify
-
-```sh
-npm test
-npm run build
-```
-
-After `docker compose up` or `scripts/dev.*`, check that the homepage, `/api/file-count`, and a static asset return HTTP 200. Then upload and analyze a real conference photo. First analysis can take tens of seconds on local hardware.
-
-## API routes
-
-| Route | Purpose |
-|---|---|
-| `POST /api/upload` | Validated upload to the `snaps` bucket (GPS stored as object metadata) |
-| `GET /api/images` | Runs crowd and hands-up analysis via the ADK agent (long-running, cached) |
-| `GET /api/file-count` | Photo count, no model calls |
-| `GET /api/stage-image?path=` | Same-origin image proxy from object storage |
-| `POST /api/reset` | Clears the shared photo library (requires confirmation) |
-| `GET /api/locations` | GPS-only refresh, no model calls |
-| `GET /api/tiles?z=&x=&y=` | Same-origin OpenStreetMap tile proxy |
-
-## Inspecting stored objects
-
-Reset removes both the photo from `snaps` and its cached `<photo>.json` from `analysis`. The analysis cache removal is best-effort, so a failed delete can leave an orphan JSON in `analysis`; the app never shows it, because the photo list comes from `snaps`.
-
-To see what is stored, sign in to the AIStor console at http://localhost:9001 with the root credentials (`minioadmin` by default). Open the `snaps` bucket, select a photo, and use the Metadata and Tags panels: they show `latitude`, `longitude`, `analyzed`, `total_attendees`, `raised_hands`, and `caption`. From the CLI, `mc stat local/snaps/<photo>` prints the same metadata and tags.
-
-## Costs and limits
-
-- Inference is local and free, but slow. Model choice and GPU availability dominate latency.
-- This is a shared demo. All app users see the same photo library, and a confirmed reset deletes it for everyone. Restrict access before use.
-- Counts are AI estimates, not attendance records. Totals across photos are not unique attendees, and hands-up percentage is not a general engagement metric.
-- Open vision models count crowds less accurately than frontier hosted models. Treat estimates as rough.
-
-## References
-
-- [Google ADK documentation](https://google.github.io/adk-docs/) - the agent framework
-- [Ollama](https://ollama.com/) - local model runtime
-- [MinIO AIStor](https://min.io/product/aistor) - object storage (free single-node license at the [pricing page](https://min.io/pricing))
-- [MinIO client (mc)](https://min.io/docs/minio/linux/reference/minio-mc.html) - CLI used to provision buckets and users
-- [uv](https://docs.astral.sh/uv/) - Python package and project manager for the agent
-- [Next.js](https://nextjs.org/docs) - web framework
-- [exifr](https://github.com/MikeKovarik/exifr) - EXIF and GPS parsing
-- [sharp](https://sharp.pixelplumbing.com/) - image validation
-- [Leaflet](https://leafletjs.com/) and [OpenStreetMap](https://www.openstreetmap.org/) - session map and tiles
-- [smart-crowd-counter-demo](https://github.com/kameshsampath/smart-crowd-counter-demo) - the prompt-driven parent repo
-- [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0) - license text
+| `npm ci` | Install web app dependencies |
+| `npm run dev` | Next.js dev server, standalone |
+| `npm test` | Run the vitest suites (`__tests__/`) |
+| `npm run build` | Production build |
+| `npm start` | Serve the production build |
+| `cd agent && uv sync` | Install the agent's Python dependencies |
+| `uv run smart-crowd-counter-agent` | Run the ADK agent standalone (needs `AGENT_MODEL`, `OLLAMA_BASE_URL`) |
+| `uv sync --project docs` | Install the docs toolchain |
+| `uv run --project docs mkdocs serve -a 127.0.0.1:8080` | Preview the docs site locally |
+| `uv run --project docs mkdocs build --strict` | Build the docs site (`site/`) |
 
 ## License
 

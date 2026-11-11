@@ -1,0 +1,21 @@
+# Ollama inference provider profile — credentialless, host-local.
+# binaries are trimmed to paths that actually exist in the workload image
+# (agent/Dockerfile.sandbox). See docs/sandbox-policy.md.
+id: ollama-openai                              # (1)
+display_name: Ollama
+description: Host-local Ollama OpenAI-compatible API (Windows host, CUDA)
+category: inference                            # (2)
+inference_capable: true
+credentials: []                                # (3)
+endpoints:
+  - host: host.openshell.internal               # (4)
+    port: 11434                                # (4)
+    protocol: rest
+    access: read-write
+    enforcement: enforce
+binaries:
+  - /usr/bin/curl
+  - /usr/local/bin/python
+  - /usr/local/bin/python3
+  - /usr/local/bin/python3.*
+  - /sandbox/.venv/**                          # (5)

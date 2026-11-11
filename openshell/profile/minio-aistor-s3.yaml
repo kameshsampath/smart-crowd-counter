@@ -1,0 +1,34 @@
+# MinIO AIStor data provider profile. Static S3 credentials are supplied
+# gateway-side (`openshell provider create --credential ...`) and never stored
+# in this file; the workload env only gets placeholders and the gateway
+# re-signs SigV4. env_vars declare both AWS_* (SigV4 signer) and S3_* (the
+# names the agent reads). See docs/sandbox-policy.md.
+id: minio-aistor-s3                            # (1)
+display_name: MinIO AIStor (local S3)
+description: Host-local MinIO AIStor on the Windows host; gateway-side SigV4 signing
+category: data                                 # (2)
+inference_capable: false
+credentials:
+  - name: access_key_id
+    description: AIStor service-account access key (static; held gateway-side only)
+    env_vars: [AWS_ACCESS_KEY_ID, S3_ACCESS_KEY]            # (3)
+    required: true
+    refresh:
+      strategy: static
+  - name: secret_access_key
+    description: AIStor service-account secret key (static; held gateway-side only)
+    env_vars: [AWS_SECRET_ACCESS_KEY, S3_SECRET_ACCESS_KEY] # (3)
+    required: true
+    refresh:
+      strategy: static
+endpoints:
+  - host: host.openshell.internal               # (4)
+    port: 9000                                 # (4)
+    protocol: rest
+    access: read-write
+    enforcement: enforce
+    credential_signing: sigv4                  # (5)
+    signing_service: s3
+    signing_region: us-east-1
+binaries:
+  - /usr/bin/curl                              # (6)

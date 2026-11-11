@@ -1,0 +1,14 @@
+# Sandbox policy for the Smart Crowd Counter ADK agent.
+# Schema-valid fields only; unknown fields are rejected by the gateway.
+# Network allows come solely from the attached provider profiles
+# (ollama-openai :11434, minio-aistor-s3 :9000) — see docs/sandbox-policy.md.
+version: 1                                    # (1)
+filesystem_policy:
+  include_workdir: true                       # (2)
+  read_only: [/bin, /usr, /lib, /proc, /dev/urandom, /etc, /var/log]  # (3)
+  read_write: [/tmp, /dev/null]               # (4)
+landlock:
+  compatibility: hard_requirement             # (5)
+process:
+  run_as_user: "1500"                         # (6)
+  run_as_group: "1500"                        # (6)

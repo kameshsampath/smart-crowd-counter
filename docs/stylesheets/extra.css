@@ -1,0 +1,9 @@
+/* Extra styling on top of mkdocs-material */
+
+.mermaid {
+  text-align: center;
+}
+
+.md-typeset img {
+  border-radius: 6px;
+}
