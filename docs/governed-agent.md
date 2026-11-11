@@ -42,20 +42,15 @@ driver).
 
 ## Walkthrough (windows+wsl2)
 
-All commands from the repo root on the Windows host. Expected outputs are from a
-verified run on 2026-11-11 (openshell 0.1.8, docs Latest v0.1.8).
+### Windows Host
+
+All commands from the repo root on the Windows host.
 
 **Step 1 — Build the golden image once** (exports `dist/openshell-golden.tar`):
 
 ```powershell
 scripts/provision/provision.sh windows+wsl2 -BuildGolden -BaseDistro Ubuntu
 ```
-
-- host: 16.42 GB RAM, 16 cores → `.wslconfig` memory=6GB processors=4 swap=8GB
-- WARNING: free VRAM 5081 MiB < 6144 MiB → consider the `AGENT_MODEL=qwen2.5vl:3b` fallback
-- Landlock ABI=3 (>= 3 required) OK on kernel 6.6.87.2-microsoft-standard-WSL2
-- rootless headless Podman OK (podman version 5.7.0)
-- gateway ready: <https://127.0.0.1:17670> (Version: 0.1.8)
 
 **Step 2 — Provision / reset the project distro** from the golden tar:
 
@@ -69,8 +64,6 @@ scripts/provision/provision.sh windows+wsl2   # or -ResetFromGoldenTar
 AGENT_MODEL=qwen2.5vl:3b scripts/dev-governed.sh
 ```
 
-- agent health: `{"status":"ok","model":"qwen2.5vl:3b","ollama":"http://host.openshell.internal:11434",...}`
-
 **Step 4 — Point the web app at the governed agent and open the UI.** Set in
 `.env`: `AGENT_URL=http://default--crowd-counter.openshell.localhost:17670`, then:
 
@@ -78,11 +71,7 @@ AGENT_MODEL=qwen2.5vl:3b scripts/dev-governed.sh
 npm run dev
 ```
 
-- Upload a photo in the browser → `POST /analyze` → analysis completes.
-- Verified: `POST /analyze {"path":"IMG_2544-....jpg"}` → HTTP 200 in 7.8s →
-  `{"total_attendees":500,"raised_hands":50,"percentage_with_hands_up":10.0,"caption":"Selfie of a conference speaker with a large audience in the background."}`
-
-Inside the WSL2 distro, the same checks work directly:
+### Inside WSL2 Distro
 
 ```bash
 wsl -d smart-crowd-counter -- openshell status
@@ -108,22 +97,22 @@ wsl -d smart-crowd-counter -- openshell logs crowd-counter
 
 - OCSF events, including denies
 
-Deny evidence (exits 0 only when all probes fire):
+Deny evidence (exits 0 only when all probes fire). Set `REPO_WIN` to your
+Windows clone path once per shell — `wslpath` converts it to the WSL mount,
+so no `/mnt/<drive>/...` path is hardcoded:
 
 ```bash
-wsl -d smart-crowd-counter -- bash /mnt/d/git/smart-crowd-counter/scripts/deny-evidence.sh
+export REPO_WIN='D:/git/smart-crowd-counter'   # adjust to your clone
+wsl -d smart-crowd-counter -- bash "$(wsl wslpath -u "$REPO_WIN")/scripts/deny-evidence.sh"
 ```
 
-- OK: example.com blocked (curl exit 7)
-- OK: `/root/.bashrc` read blocked: Permission denied
-- OK: `/.openshell` blocked
-- OK: private-logs denied by IAM: S3Error code=AccessDenied (HTTP 403)
-- ALL DENIES FIRED (log lines captured to `dist/deny-evidence.log`)
-
-CI: `npm test` includes `__tests__/openshell/schema-conformance.test.ts` — every
-field in `openshell/policy/*.yaml` and `openshell/profile/*.yaml` must be in the
-allowlist generated from the NVIDIA schema reference, so an invented field
-(`masked_paths`, `default_egress`, `no_new_privileges`, ...) fails the build.
+```shell
+  OK: example.com blocked (curl exit 7)
+  OK: `/root/.bashrc` read blocked: Permission denied
+  OK: `/.openshell` blocked
+  OK: private-logs denied by IAM: S3Error code=AccessDenied (HTTP 403)
+  ALL DENIES FIRED (log lines captured to `dist/deny-evidence.log`)
+```
 
 ## Reviewable security artifact — `openshell policy get crowd-counter --full`
 

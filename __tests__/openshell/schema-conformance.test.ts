@@ -3,9 +3,8 @@
 // The allowlist in ./schema-allowlist.ts is GENERATED from the authoritative
 // NVIDIA schema reference (see scripts/openshell/gen-schema-allowlist.mjs):
 // a field is legal only if the schema lists it. An invented-but-plausible
-// field (the bounded-boxer regression: masked_paths / default_egress /
-// no_new_privileges) therefore fails this test — the regression must be
-// impossible to ship.
+// field (masked_paths / default_egress / no_new_privileges) therefore fails
+// this test — such a regression must be impossible to ship.
 import { describe, expect, it } from "vitest"
 import { readFileSync, readdirSync } from "node:fs"
 import path from "node:path"
