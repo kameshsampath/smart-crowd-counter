@@ -64,9 +64,7 @@ Open <http://localhost:3000> and upload a photo.
 
 ## Verify
 
-Build and unit-test commands (`npm test`, `npm run build`, …) are listed in the
-README under "Develop locally". Smoke-check the running stack — each of these
-should print HTTP 200 or JSON:
+Smoke-check the running stack — each of these should print HTTP 200 or JSON:
 
 === "Bash"
 

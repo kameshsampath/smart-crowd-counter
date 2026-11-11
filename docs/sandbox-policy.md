@@ -4,11 +4,11 @@ Governed mode is configured by three files under `openshell/`. Each file is
 embedded below with numbered callouts and explained underneath; the GitHub
 links open the source on `main`.
 
-| File | Source on GitHub | Role |
-|---|---|---|
-| `openshell/policy/crowd-counter-agent.yaml` | [view](https://github.com/kameshsampath/smart-crowd-counter/blob/main/openshell/policy/crowd-counter-agent.yaml) | Sandbox policy: filesystem, Landlock, process identity. Holds **no** network rules. |
-| `openshell/profile/ollama-openai.yaml` | [view](https://github.com/kameshsampath/smart-crowd-counter/blob/main/openshell/profile/ollama-openai.yaml) | Inference provider profile: host-local Ollama, credentialless. |
-| `openshell/profile/minio-aistor-s3.yaml` | [view](https://github.com/kameshsampath/smart-crowd-counter/blob/main/openshell/profile/minio-aistor-s3.yaml) | Data provider profile: host-local AIStor, static credentials held gateway-side, SigV4 re-signed by the gateway. |
+| File |  Role |
+|---|------|
+| [`openshell/policy/crowd-counter-agent.yaml`](https://github.com/kameshsampath/smart-crowd-counter/blob/main/openshell/policy/crowd-counter-agent.yaml) | Sandbox policy: filesystem, Landlock, process identity. Holds **no** network rules. |
+| [`openshell/profile/ollama-openai.yaml`](https://github.com/kameshsampath/smart-crowd-counter/blob/main/openshell/profile/ollama-openai.yaml) | Inference provider profile: host-local Ollama, credentialless. |
+| [`openshell/profile/minio-aistor-s3.yaml`](https://github.com/kameshsampath/smart-crowd-counter/blob/main/openshell/profile/minio-aistor-s3.yaml) | Data provider profile: host-local AIStor, static credentials held gateway-side, SigV4 re-signed by the gateway. |
 
 ## Sandbox policy — `crowd-counter-agent.yaml`
 
@@ -23,12 +23,17 @@ links open the source on `main`.
 5. `landlock.compatibility: hard_requirement` — the sandbox refuses to start without Landlock ABI >= 3 (linux/wsl2).
 6. `process.run_as_user` / `run_as_group: "1500"` — non-root `sandbox` identity, matching `USER sandbox` in `agent/Dockerfile.sandbox`.
 
-Network rules are intentionally absent from the policy: the attached provider
-profiles contribute the only allow rules (`host.openshell.internal:11434` for
-Ollama and `:9000` for AIStor). `openshell policy get crowd-counter --full`
-shows exactly those plus this policy and nothing else.
+!!! note
+    Network rules are intentionally absent from the policy provider
+    profiles contribute the only allow rules:
+      - `host.openshell.internal:11434` for Ollama 
+      - `host.openshell.internal:9000` for AIStor
+    
+    `openshell policy get crowd-counter --full` shows exactly those plus this policy.
 
-## Profile — `ollama-openai.yaml` (inference, credentialless)
+## Profiles 
+
+### `ollama-openai.yaml` (inference, credentialless)
 
 ```yaml
 --8<-- "openshell/profile/ollama-openai.yaml"
@@ -40,7 +45,7 @@ shows exactly those plus this policy and nothing else.
 4. Endpoint `host.openshell.internal:11434` — host-local services are reached via this hostname, never loopback.
 5. `binaries` — trimmed to paths that actually exist in the workload image (`agent/Dockerfile.sandbox`); anything else is denied even on an allowed endpoint.
 
-## Profile — `minio-aistor-s3.yaml` (data, gateway-signed)
+### `minio-aistor-s3.yaml` (data, gateway-signed)
 
 ```yaml
 --8<-- "openshell/profile/minio-aistor-s3.yaml"

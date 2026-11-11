@@ -114,9 +114,15 @@ wsl -d smart-crowd-counter -- bash "$(wsl wslpath -u "$REPO_WIN")/scripts/deny-e
   ALL DENIES FIRED (log lines captured to `dist/deny-evidence.log`)
 ```
 
-## Reviewable security artifact — `openshell policy get crowd-counter --full`
+## Reviewable security artifact
 
-Captured from the verified run (hash `734898ce…`):
+Run the following command:
+
+```shell
+openshell policy get crowd-counter --full
+```
+
+That should show the following YAML which is the currently applicable policy:
 
 ```yaml
 version: 1
@@ -134,12 +140,7 @@ network_policies:
   _provider_ollama:  # host.openshell.internal:11434, rest, read-write
 ```
 
-…with each provider rule's `binaries` limited to the workload image's actual paths
-(`/usr/bin/curl`, `/usr/local/bin/python*`, `/sandbox/.venv/**`). Nothing else is
-allowed: default-deny egress, seccomp and Landlock are implicit OpenShell
-behavior; the sandbox env holds only `openshell:resolve:env:...` placeholders.
-
-## What the agent can and cannot do (verified)
+## What the agent can and cannot do
 
 | Probe (inside sandbox) | Result |
 | ---------------------- | ------ |
@@ -150,10 +151,11 @@ behavior; the sandbox env holds only `openshell:resolve:env:...` placeholders.
 | `list_objects('private-logs')` (outside IAM policy) | S3 `AccessDenied` 403 |
 | Ollama `/api/tags` via `host.openshell.internal:11434` | 200 — inference path works |
 
-Note: the installed 0.1.8 runtime returns `credential_unavailable` (HTTP 500) for
-a placeholder at an unbound endpoint where the docs' error table lists
-`credential_endpoint_mismatch` (403) — the installed runtime wins; both are
-credential-binding denies.
+!!! note
+    The installed 0.1.8 runtime returns `credential_unavailable` (HTTP 500) for
+    a placeholder at an unbound endpoint where the docs' error table lists
+    `credential_endpoint_mismatch` (403) — the installed runtime wins; both are
+    credential-binding denies.
 
 ## Layout
 
