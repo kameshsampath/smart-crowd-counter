@@ -53,17 +53,25 @@ ollama pull qwen2.5vl:3b   # low-RAM fallback, ~3.5 GB
 
 ## Manual local setup
 
-If you prefer to start each service yourself:
+If you prefer to start each service yourself instead of using the launchers:
 
-1. Start AIStor with `MINIO_ROOT_USER` and `MINIO_ROOT_PASSWORD` set:
-   `minio server .minio-data --license minio.license --console-address ":9001"`
-2. Provision storage with `mc`: set an alias, run
-   `mc mb --ignore-existing local/snaps local/analysis`, then create the
-   `crowd-counter` policy and service user exactly as `scripts/dev.sh` does.
-3. Start the agent: `cd agent && uv sync && uv run smart-crowd-counter-agent`
-   with `OLLAMA_BASE_URL` and `AGENT_MODEL` set.
-4. Start the web app: `npm ci && npm run dev` with `S3_ENDPOINT`,
-   `S3_ACCESS_KEY`, `S3_SECRET_KEY`, and `AGENT_URL` set. See `.env.example`.
+```sh
+# 1. AIStor — S3 API on :9000, console on :9001
+MINIO_ROOT_USER=minioadmin MINIO_ROOT_PASSWORD=minioadmin \
+  minio server .minio-data --license minio.license --console-address ":9001"
+
+# 2. Buckets + scoped service user via mc — create the crowd-counter policy
+#    and user exactly as scripts/dev.sh does
+mc alias set local http://localhost:9000 minioadmin minioadmin
+mc mb --ignore-existing local/snaps local/analysis
+
+# 3. ADK agent on :8000 (OLLAMA_BASE_URL / AGENT_MODEL also in .env)
+cd agent && uv sync
+uv run smart-crowd-counter-agent
+
+# 4. Web app on :3000 (S3_ENDPOINT / S3_ACCESS_KEY / S3_SECRET_KEY / AGENT_URL in .env)
+npm ci && npm run dev
+```
 
 !!! tip "No AIStor license?"
     Point `S3_ENDPOINT` at any S3-compatible store, for example community

@@ -12,6 +12,7 @@ exclude_docs: |
   pyproject.toml
   .venv/
   documentation.md
+  idd/*
 extra_css:
   - stylesheets/extra.css
 extra_javascript:
@@ -47,15 +48,17 @@ nav:
   - "Environment Setup": setup.md
   - "Architecture": architecture.md
   - "Running the Demo": demo.md
-  - "API Reference": api.md
   - "Storage and Data Model": storage.md
   - "Governed Agent (OpenShell)":
-      - "Design Notes": openshell.md
+      - "Design": openshell.md
       - "Demo Walkthrough": governed-agent.md
-      - "Security Intent (IDD)": idd/part-1-openshell-security.idd.md
-  - "Troubleshooting": troubleshooting.md
-  - "References": references.md
+  - "What's Next": whats-next.md
+  - "Glossary": glossary.md
+  - "References":
+      - "API": api.md
+      - "Links and Docs": references.md
   - "Run with Docker": docker.md
+  - "Troubleshooting": troubleshooting.md
 markdown_extensions:
   - toc:
       baselevel: 1

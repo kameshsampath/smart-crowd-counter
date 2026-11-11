@@ -1,5 +1,13 @@
 # Architecture
 
+Four moving parts: a Next.js web app, a Google ADK agent, an Ollama vision
+model, and an S3-compatible object store. The web app stores photos and serves
+the dashboard, the agent makes the vision call, Ollama runs the model, and
+AIStor holds the photos plus the cached results. The first diagram shows the
+always-on path; the sequence diagram shows one upload-to-dashboard request
+end to end; the last section covers the optional governed mode that sandboxes
+the agent.
+
 ## Components
 
 - `app/` — Next.js App Router pages and API routes (`app/api/*`).
@@ -82,7 +90,7 @@ imported from a golden tar) runs only the OpenShell gateway, rootless Podman,
 and the sandboxed agent.
 
 ```mermaid
-flowchart LR
+flowchart TB
     subgraph HOST["Windows host (native)"]
         direction LR
         B["Browser"] --> W["Next.js :3000"]
@@ -90,7 +98,7 @@ flowchart LR
         O["Ollama CUDA :11434"]
     end
     subgraph DISTRO["WSL2 distro 'smart-crowd-counter' — OpenShell boundary"]
-        direction LR
+        direction TB
         GW["OpenShell gateway<br/>policy + providers + OCSF logs"]
         POD["rootless Podman"]
         A["ADK agent :8000<br/>env: placeholders only"]

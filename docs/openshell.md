@@ -1,9 +1,7 @@
 # OpenShell Integration — Design Notes
 
 Design notes for governing the Smart Crowd Counter analysis agent with NVIDIA
-OpenShell. The versioned intent artifact is
-[`docs/idd/part-1-openshell-security.idd.md`](idd/part-1-openshell-security.idd.md);
-implementation commits are reviewed against it.
+OpenShell.
 
 **Verification metadata**
 
@@ -81,7 +79,7 @@ artifact).
 ## 4. Topology
 
 ```mermaid
-flowchart LR
+flowchart TB
   subgraph HOST["Windows host (native)"]
     direction LR
     BROWSER["Browser"] --> NEXT["Next.js :3000"]
@@ -89,7 +87,7 @@ flowchart LR
     OLLAMA["Ollama CUDA :11434"]
   end
   subgraph DISTRO["WSL2 distro 'smart-crowd-counter' (from golden tar) — OpenShell boundary"]
-    direction LR
+    direction TB
     GW["OpenShell gateway<br/>policy + providers + OCSF logs"]
     POD["rootless Podman"]
     AGENT["ADK agent :8000<br/>env holds placeholders only"]

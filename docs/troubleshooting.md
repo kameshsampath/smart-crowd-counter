@@ -20,8 +20,13 @@ never silent.
 inference server may be busy or offline.
 
 !!! tip "Check the agent and Ollama"
-    Check http://localhost:8000/health and run `ollama ps`, then retry
-    shortly. Results are cached, so retries are free once a call succeeds.
+    ```sh
+    curl -s http://localhost:8000/health   # agent
+    ollama ps                              # local inference
+    ```
+
+    Then retry shortly. Results are cached, so retries are free once a call
+    succeeds.
 
 ## First analysis is slow
 
@@ -51,8 +56,11 @@ The stack binds 3000 (web), 8000 (agent), 9000/9001 (AIStor), and 11434
 (Ollama).
 
 !!! tip "Docs preview port"
-    The docs preview defaults to port 8000 too — when the app is running, use
-    `uv run --project docs mkdocs serve -a 127.0.0.1:8080` instead.
+    The docs preview defaults to port 8000 too — when the app is running, use:
+
+    ```sh
+    uv run --project docs mkdocs serve -a 127.0.0.1:8080
+    ```
 
 ## Reset failed partway
 

@@ -2,7 +2,7 @@
 
 ## Upload and analyze
 
-Open http://localhost:3000 and upload JPG, JPEG, or PNG photos — up to 4 at a
+Open <http://localhost:3000> and upload JPG, JPEG, or PNG photos — up to 4 at a
 time, 3.75 MB and 8000 x 8000 px each. Oversized photos are rejected in the
 browser before upload.
 
@@ -54,27 +54,8 @@ After `docker compose up` or `scripts/dev.*`, check that the homepage,
 `/api/file-count`, and a static asset return HTTP 200. Then upload and analyze
 a real conference photo.
 
-## Practical applications
+## Extending it
 
-Every application below is the same loop: field workers capture photos, drop
-them into object storage, and the governed agent analyzes them — counts are
-estimates, not records.
-
-- **Industrial / factory floor inspections** — safety walkthroughs count PPE
-  compliance, blocked exits, and occupancy per zone from site photos.
-- **Airport & security-post inspections** — queue lengths, crowd density at
-  gates and checkpoints, and raised-hand counts during briefings.
-- **Smart-city infrastructure** — lamp posts, utility boxes and public works
-  photographed on rounds; the agent flags damage and estimates crowd presence
-  at public spaces.
-- **Field service & insurance claims** — adjusters photograph damage; the agent
-  produces structured summaries and rough counts (vehicles, affected rooms).
-- **Event / conference analytics** — the current demo: attendee and
-  raised-hand estimates per session photo, with a GPS session map.
-
-## Roadmap
-
-- **Inbox processing (next)**: photos land in `snaps/inbox/` and the governed
-  agent validates, processes, and files them automatically — no upload UI
-  needed. Planned as a watch-triggered tool-using agent behind the same
-  sandbox boundary.
+The same loop — photos into object storage, governed agent analyzes — powers
+field-inspection, claims, and smart-city use cases. See
+[What's Next](whats-next.md) for the use-case list and roadmap ideas.

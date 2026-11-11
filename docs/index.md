@@ -1,12 +1,12 @@
 # Smart Crowd Counter
 
-Upload conference session photos and get estimates of attendee count, raised
-hands, and a caption for each photo. Everything runs on your own machine: a
-[Google ADK](https://google.github.io/adk-docs/) agent calls a local
-[Ollama](https://ollama.com/) vision model, and photos are stored in
-[MinIO AIStor](https://min.io/product/aistor) (any S3-compatible store works
-through the same S3 API). An optional map shows where each photo was taken,
-using [EXIF](https://www.exif.org/) GPS.
+Upload a photo of a crowd — get back an estimate of attendees, raised hands,
+and a one-line caption, computed entirely on your own machine by a local
+vision model. No cloud account, nothing leaves your disk: a
+[Google ADK](https://google.github.io/adk-docs/) agent calls
+[Ollama](https://ollama.com/), photos live in
+[MinIO AIStor](https://min.io/product/aistor), and a map plots the
+[EXIF](https://www.exif.org/) GPS of each shot.
 
 !!! warning "Estimates, not records"
     Counts are AI estimates, not attendance records. Totals across photos are
@@ -21,25 +21,40 @@ using [EXIF](https://www.exif.org/) GPS.
 - Session map with GPS pins from EXIF, linked back to the source photo.
 - Shared photo library with a confirmed reset flow. A retry token protects cleanup against partial failures.
 
-## Documentation map
+## Tech stack
+
+| Layer | Technology |
+|---|---|
+| Web app | [Next.js](https://nextjs.org/docs) 16 + [React](https://react.dev/) 19, TypeScript, Tailwind CSS 4 |
+| Images | [sharp](https://sharp.pixelplumbing.com/) (validation), [exifr](https://github.com/MikeKovarik/exifr) (EXIF GPS) |
+| Storage | [MinIO AIStor](https://min.io/product/aistor) over the S3 API (`minio` JS SDK) |
+| Map | [Leaflet](https://leafletjs.com/) + [OpenStreetMap](https://www.openstreetmap.org/) tiles |
+| Agent | [Google ADK](https://google.github.io/adk-docs/) on Python 3.12, [FastAPI](https://fastapi.tiangolo.com/), via [LiteLLM](https://docs.litellm.ai/) |
+| Inference | [Ollama](https://ollama.com/) running `qwen2.5vl` (7b default, 3b on low-RAM machines) |
+| Governed mode | [NVIDIA OpenShell](https://github.com/NVIDIA/OpenShell) sandbox |
+| Tooling | Node.js 24, [uv](https://docs.astral.sh/uv/), Docker Compose |
+
+## Table of Contents
 
 | Topic | Page |
 |---|---|
 | Fastest path to a running app | [Quickstart](quickstart.md) |
 | Tools, prerequisites, and every environment variable | [Environment Setup](setup.md) |
-| Full stack in Docker | [Run with Docker](docker.md) |
 | Components, data flow, governed mode | [Architecture](architecture.md) |
 | Upload photos, dashboard, map, verification | [Running the Demo](demo.md) |
-| HTTP API of the web app and the agent | [API Reference](api.md) |
 | Buckets, object metadata, analysis cache | [Storage and Data Model](storage.md) |
+| HTTP API of the web app and the agent | [API Reference](api.md) |
 | Sandboxing the agent with NVIDIA OpenShell | [Governed Agent](openshell.md) |
+| Use cases and roadmap ideas | [What's Next](whats-next.md) |
 | Common problems, costs and limits | [Troubleshooting](troubleshooting.md) |
+| Full stack in Docker | [Run with Docker](docker.md) |
+| Terms used across the docs | [Glossary](glossary.md) |
 | All external links and project references | [References](references.md) |
 
 ## Services at a glance
 
 | Service | URL |
 |---|---|
-| Web app | http://localhost:3000 |
-| Agent health | http://localhost:8000/health |
-| AIStor console | http://localhost:9001 (`minioadmin` / `minioadmin`) |
+| Web app | <http://localhost:3000> |
+| Agent health | <http://localhost:8000/health> |
+| AIStor console | <http://localhost:9001> (`minioadmin` / `minioadmin`) |

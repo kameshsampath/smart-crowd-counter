@@ -49,12 +49,23 @@ uv sync --project docs
 uv run --project docs mkdocs serve -a 127.0.0.1:8080
 ```
 
-## Verify
+## Develop locally
 
-```sh
-npm test
-npm run build
-```
+All build, run, and test commands (the one-command full stack stays the
+launcher scripts in Quickstart above):
+
+| Command | Purpose |
+|---|---|
+| `npm ci` | Install web app dependencies |
+| `npm run dev` | Next.js dev server, standalone |
+| `npm test` | Run the vitest suites (`__tests__/`) |
+| `npm run build` | Production build |
+| `npm start` | Serve the production build |
+| `cd agent && uv sync` | Install the agent's Python dependencies |
+| `uv run smart-crowd-counter-agent` | Run the ADK agent standalone (needs `AGENT_MODEL`, `OLLAMA_BASE_URL`) |
+| `uv sync --project docs` | Install the docs toolchain |
+| `uv run --project docs mkdocs serve -a 127.0.0.1:8080` | Preview the docs site locally |
+| `uv run --project docs mkdocs build --strict` | Build the docs site (`site/`) |
 
 ## License
 

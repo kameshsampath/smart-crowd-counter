@@ -22,7 +22,7 @@ bootstrap.
 
 ## Inspecting stored objects
 
-Sign in to the AIStor console at http://localhost:9001 with the root
+Sign in to the AIStor console at <http://localhost:9001> with the root
 credentials (`minioadmin` by default). Open the `snaps` bucket, select a
 photo, and use the Metadata and Tags panels. From the CLI, `mc stat
 local/snaps/<photo>` prints the same:

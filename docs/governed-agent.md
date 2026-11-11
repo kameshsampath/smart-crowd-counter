@@ -1,8 +1,7 @@
 # Governed agent — demo walkthrough
 
 End-to-end guide for running the Smart Crowd Counter analysis agent inside an
-NVIDIA OpenShell sandbox. Design notes: [docs/openshell.md](openshell.md). Intent:
-[docs/idd/part-1-openshell-security.idd.md](idd/part-1-openshell-security.idd.md).
+NVIDIA OpenShell sandbox.
 
 !!! note "Native Windows + WSL2 combo"
     The Windows host runs Ollama (CUDA), MinIO AIStor and Next.js natively. A

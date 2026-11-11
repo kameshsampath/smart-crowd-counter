@@ -1,6 +1,6 @@
 # API Reference
 
-## Web app (Next.js, http://localhost:3000)
+## Web app (Next.js, <http://localhost:3000>)
 
 | Route | Purpose |
 |---|---|
@@ -36,7 +36,7 @@
 `GET /api/images` is long-running on first sight of a photo (it calls the
 agent), then served from the cache.
 
-## Agent (FastAPI, http://localhost:8000)
+## Agent (FastAPI, <http://localhost:8000>)
 
 | Route | Purpose |
 |---|---|

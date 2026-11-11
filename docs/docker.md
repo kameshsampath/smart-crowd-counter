@@ -44,6 +44,5 @@ docker compose exec ollama ollama pull qwen2.5vl:7b   # once, ~5 GB
     (built in on Windows and macOS, declared for Linux in
     `docker-compose.yml`).
 
-!!! note "No AIStor license?"
-    Point `S3_ENDPOINT` at any S3-compatible store, for example community
-    MinIO. The app only uses the S3 API.
+No AIStor license yet? Point `S3_ENDPOINT` at any S3-compatible store, for
+example community MinIO. The app only uses the S3 API.

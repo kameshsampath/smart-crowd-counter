@@ -17,7 +17,7 @@ uv sync --project docs                 # one-time; creates docs/.venv
 uv run --project docs mkdocs serve -a 127.0.0.1:8080   # default port 8000 collides with the agent
 ```
 
-Open http://127.0.0.1:8080. Without uv, `pip install -r docs/requirements.txt`
+Open <http://127.0.0.1:8080>. Without uv, `pip install -r docs/requirements.txt`
 works too — that file is generated from the pyproject with
 `uv pip compile docs/pyproject.toml -o docs/requirements.txt` and is what CI uses.
 
@@ -35,8 +35,9 @@ uv run --project docs mkdocs build --strict   # output in site/, which is git-ig
 - `pyproject.toml` / `uv.lock` — docs toolchain as a uv project (`package = false`);
   `requirements.txt` is the pip/CI export of it. Both are excluded from the
   built site via `exclude_docs`.
-- Existing deep dives (`openshell.md`, `governed-agent.md`, `idd/`) are part of
-  the nav under "Governed Agent (OpenShell)".
+- Existing deep dives (`openshell.md`, `governed-agent.md`) are part of the nav
+  under "Governed Agent (OpenShell)". The `idd/` design artifact is excluded
+  from the built site like this page.
 
 To add a page: create `docs/<page>.md` and add it to `nav:` in `mkdocs.yaml` —
 `mkdocs build --strict` fails on pages missing from the nav.
