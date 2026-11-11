@@ -45,48 +45,80 @@ driver).
 All commands from the repo root on the Windows host. Expected outputs are from a
 verified run on 2026-11-11 (openshell 0.1.8, docs Latest v0.1.8).
 
+**Step 1 — Build the golden image once** (exports `dist/openshell-golden.tar`):
+
 ```powershell
-# 1. Build the golden image once (exports dist/openshell-golden.tar)
 scripts/provision/provision.sh windows+wsl2 -BuildGolden -BaseDistro Ubuntu
-#    [provision] host: 16.42 GB RAM, 16 cores -> .wslconfig memory=6GB processors=4 swap=8GB ...
-#    WARNING: free VRAM 5081 MiB < 6144 MiB - consider AGENT_MODEL=qwen2.5vl:3b fallback
-#    [provision] Landlock ABI=3 (>= 3 required) OK on kernel 6.6.87.2-microsoft-standard-WSL2
-#    [provision] rootless headless Podman OK (podman version 5.7.0)
-#    [provision] gateway ready: https://127.0.0.1:17670 ( Version: 0.1.8)
-
-# 2. Provision / reset the project distro from the golden tar
-scripts/provision/provision.sh windows+wsl2            # or -ResetFromGoldenTar
-
-# 3. Launch the governed agent (MinIO is ensured on :9000 first)
-AGENT_MODEL=qwen2.5vl:3b scripts/dev-governed.sh
-#    [dev-governed] agent health: {"status":"ok","model":"qwen2.5vl:3b","ollama":"http://host.openshell.internal:11434",...}
-
-# 4. Point the web app at the governed agent and open the UI
-#    .env: AGENT_URL=http://default--crowd-counter.openshell.localhost:17670
-npm run dev
-#    Upload a photo in the browser -> POST /analyze -> analysis completes.
-#    Verified: POST /analyze {"path":"IMG_2544-....jpg"} -> http=200 in 7.8s
-#    {"total_attendees":500,"raised_hands":50,"percentage_with_hands_up":10.0,
-#     "caption":"Selfie of a conference speaker with a large audience in the background."}
 ```
 
-Inside the WSL2 distro, the same commands work directly:
+- host: 16.42 GB RAM, 16 cores → `.wslconfig` memory=6GB processors=4 swap=8GB
+- WARNING: free VRAM 5081 MiB < 6144 MiB → consider the `AGENT_MODEL=qwen2.5vl:3b` fallback
+- Landlock ABI=3 (>= 3 required) OK on kernel 6.6.87.2-microsoft-standard-WSL2
+- rootless headless Podman OK (podman version 5.7.0)
+- gateway ready: <https://127.0.0.1:17670> (Version: 0.1.8)
+
+**Step 2 — Provision / reset the project distro** from the golden tar:
+
+```powershell
+scripts/provision/provision.sh windows+wsl2   # or -ResetFromGoldenTar
+```
+
+**Step 3 — Launch the governed agent** (MinIO is ensured on :9000 first):
+
+```powershell
+AGENT_MODEL=qwen2.5vl:3b scripts/dev-governed.sh
+```
+
+- agent health: `{"status":"ok","model":"qwen2.5vl:3b","ollama":"http://host.openshell.internal:11434",...}`
+
+**Step 4 — Point the web app at the governed agent and open the UI.** Set in
+`.env`: `AGENT_URL=http://default--crowd-counter.openshell.localhost:17670`, then:
+
+```powershell
+npm run dev
+```
+
+- Upload a photo in the browser → `POST /analyze` → analysis completes.
+- Verified: `POST /analyze {"path":"IMG_2544-....jpg"}` → HTTP 200 in 7.8s →
+  `{"total_attendees":500,"raised_hands":50,"percentage_with_hands_up":10.0,"caption":"Selfie of a conference speaker with a large audience in the background."}`
+
+Inside the WSL2 distro, the same checks work directly:
 
 ```bash
-wsl -d smart-crowd-counter -- bash -c '
-  openshell status                                  # Connected / Authenticated (mTLS) / 0.1.8
-  openshell sandbox list                            # crowd-counter  Ready
-  openshell policy get crowd-counter --full         # see artifact below
-  openshell logs crowd-counter                      # OCSF events incl. denies
-'
-# deny evidence (exits 0 only when all three blocks fire):
-wsl -d smart-crowd-counter -- bash -c 'bash /mnt/d/git/smart-crowd-counter/scripts/deny-evidence.sh'
-#   OK: example.com blocked (curl exit 7)
-#   OK: /root/.bashrc read blocked: Permission denied
-#   OK: /.openshell blocked
-#   OK: private-logs denied by IAM: S3Error code=AccessDenied (HTTP 403)
-#   ALL DENIES FIRED   (log lines captured to dist/deny-evidence.log)
+wsl -d smart-crowd-counter -- openshell status
 ```
+
+- Connected / Authenticated (mTLS) / 0.1.8
+
+```bash
+wsl -d smart-crowd-counter -- openshell sandbox list
+```
+
+- `crowd-counter` Ready
+
+```bash
+wsl -d smart-crowd-counter -- openshell policy get crowd-counter --full
+```
+
+- the full policy artifact — see below
+
+```bash
+wsl -d smart-crowd-counter -- openshell logs crowd-counter
+```
+
+- OCSF events, including denies
+
+Deny evidence (exits 0 only when all probes fire):
+
+```bash
+wsl -d smart-crowd-counter -- bash /mnt/d/git/smart-crowd-counter/scripts/deny-evidence.sh
+```
+
+- OK: example.com blocked (curl exit 7)
+- OK: `/root/.bashrc` read blocked: Permission denied
+- OK: `/.openshell` blocked
+- OK: private-logs denied by IAM: S3Error code=AccessDenied (HTTP 403)
+- ALL DENIES FIRED (log lines captured to `dist/deny-evidence.log`)
 
 CI: `npm test` includes `__tests__/openshell/schema-conformance.test.ts` — every
 field in `openshell/policy/*.yaml` and `openshell/profile/*.yaml` must be in the

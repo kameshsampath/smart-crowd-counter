@@ -1,24 +1,8 @@
-# MinIO AIStor data provider profile — static S3 credentials bound to the
-# host-local AIStor endpoint, with gateway-side SigV4 signing so the sandbox
-# workload only ever holds placeholders.
-#
-# Modeled on NVIDIA/OpenShell providers/aws-s3.yaml @ f1ce693 (endpoint
-# fields credential_signing/signing_service verified in the policy schema
-# reference, docs Latest v0.1.8, 2026-11-11) with:
-#   - category: data (category enum, how-it-works/providers/profiles)
-#   - static credentials (refresh strategy `static` is accepted; values are
-#     supplied gateway-side via `openshell provider create --credential ...`
-#     and are NOT stored in this file or in the repo)
-#   - env_vars declare BOTH the AWS_* names (required by the SigV4 signer:
-#     the gateway resolves credential_signing endpoints only from providers
-#     declaring AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY - verified against
-#     openshell 0.1.8 at runtime) AND S3_ACCESS_KEY/S3_SECRET_KEY (the names
-#     the agent reads, agent/src/smart_crowd_counter/main.py), so the
-#     placeholder lands in the agent's env and the proxy re-signs.
-#   - endpoint host.openshell.internal:9000 (never loopback), signing_region
-#     set because the host is a non-standard endpoint (how-it-works/providers/aws)
-#   - binaries trimmed to the actual paths in the workload image
-#     (agent/Dockerfile.sandbox, verified with podman run 2026-11-11)
+# MinIO AIStor data provider profile. Static S3 credentials are supplied
+# gateway-side (`openshell provider create --credential ...`) and never stored
+# in this file; the workload env only gets placeholders and the gateway
+# re-signs SigV4. env_vars declare both AWS_* (SigV4 signer) and S3_* (the
+# names the agent reads). See docs/sandbox-policy.md.
 id: minio-aistor-s3
 display_name: MinIO AIStor (local S3)
 description: Host-local MinIO AIStor on the Windows host; gateway-side SigV4 signing

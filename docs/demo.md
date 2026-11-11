@@ -45,14 +45,10 @@ partway, retry with the returned `retryToken` before starting a new one.
 
 ## Verify
 
-```sh
-npm test
-npm run build
-```
-
-After `docker compose up` or `scripts/dev.*`, check that the homepage,
-`/api/file-count`, and a static asset return HTTP 200. Then upload and analyze
-a real conference photo.
+Build/test commands are in the README's "Develop locally" section. At runtime,
+after `docker compose up` or `scripts/dev.*`, run the smoke checks in
+[Quickstart](quickstart.md#verify) — then upload and analyze a real conference
+photo.
 
 ## Extending it
 

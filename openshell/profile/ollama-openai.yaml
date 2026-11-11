@@ -1,9 +1,6 @@
 # Ollama inference provider profile — credentialless, host-local.
-# Source: NVIDIA docs "Inference" (how-it-works/inference), verified at
-# docs Latest v0.1.8 on 2026-11-11; the binaries list is trimmed to the
-# actual paths in agent/Dockerfile.sandbox's image (verified with
-# podman run: /sandbox/.venv/bin/python -> /usr/local/bin/python3.12,
-# curl at /usr/bin/curl; /usr/bin/python* and /sandbox/.uv do not exist).
+# binaries are trimmed to paths that actually exist in the workload image
+# (agent/Dockerfile.sandbox). See docs/sandbox-policy.md.
 id: ollama-openai
 display_name: Ollama
 description: Host-local Ollama OpenAI-compatible API (Windows host, CUDA)

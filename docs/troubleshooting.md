@@ -19,14 +19,22 @@ never silent.
 `GET /api/images` returns this warning when the agent call fails — the local
 inference server may be busy or offline.
 
-!!! tip "Check the agent and Ollama"
+!!! tip "Check the agent and Ollama, then retry shortly"
+    Results are cached, so retries are free once a call succeeds.
+
+=== "Bash"
+
     ```sh
     curl -s http://localhost:8000/health   # agent
     ollama ps                              # local inference
     ```
 
-    Then retry shortly. Results are cached, so retries are free once a call
-    succeeds.
+=== "PowerShell"
+
+    ```powershell
+    curl.exe -s http://localhost:8000/health
+    ollama ps
+    ```
 
 ## First analysis is slow
 

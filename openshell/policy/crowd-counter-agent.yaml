@@ -1,28 +1,14 @@
 # Sandbox policy for the Smart Crowd Counter ADK agent.
-#
-# Schema-valid fields ONLY (docs: how-it-works/policies/schema @ Latest
-# v0.1.8, cross-checked against crates/openshell-policy-schema @ f1ce693):
-#   version, filesystem_policy, landlock, process, network_policies,
-#   network_middlewares. Unknown fields are rejected by the gateway
-#   (default-deny egress and seccomp are implicit - do NOT add
-#   masked_paths/default_egress/no_new_privileges; see docs/openshell.md section 6).
-#
-# Network rules are intentionally absent here: the attached providers
-# (ollama-openai, minio-aistor-s3) contribute the only allow rules
-# (host.openshell.internal:11434 and :9000). `openshell policy get --full`
-# shows exactly those plus this sandbox policy and nothing else.
-#
-# Filesystem mirrors the documented default/baseline (default-policy) with
-# two hardening changes: landlock hard_requirement (linux/wsl2; the sandbox
-# refuses to start without Landlock ABI >= 3) and an explicit non-root
-# identity matching the image (USER sandbox, uid/gid 1500).
+# Schema-valid fields only; unknown fields are rejected by the gateway.
+# Network allows come solely from the attached provider profiles
+# (ollama-openai :11434, minio-aistor-s3 :9000) — see docs/sandbox-policy.md.
 version: 1
 filesystem_policy:
   include_workdir: true   # /sandbox (image WORKDIR) read-write
   read_only: [/bin, /usr, /lib, /proc, /dev/urandom, /etc, /var/log]
   read_write: [/tmp, /dev/null]
 landlock:
-  compatibility: hard_requirement
+  compatibility: hard_requirement   # refuse to start without Landlock ABI >= 3 (linux/wsl2)
 process:
-  run_as_user: "1500"
+  run_as_user: "1500"               # non-root, matches USER sandbox in agent/Dockerfile.sandbox
   run_as_group: "1500"

@@ -2,6 +2,7 @@
 # Licensed under the Apache License, Version 2.0
 site_name: "Smart Crowd Counter"
 site_url: https://kameshsampath.github.io/smart-crowd-counter/
+copyright: "Copyright 2026 Kamesh Sampath - Apache-2.0 (see LICENSE)"
 site_description: >
   Local, self-contained AI crowd counting: upload session photos and get
   attendee and raised-hand estimates from a local Ollama vision model via a
@@ -51,6 +52,7 @@ nav:
   - "Storage and Data Model": storage.md
   - "Governed Agent (OpenShell)":
       - "Design": openshell.md
+      - "Policy and Profiles": sandbox-policy.md
       - "Demo Walkthrough": governed-agent.md
   - "What's Next": whats-next.md
   - "Glossary": glossary.md
