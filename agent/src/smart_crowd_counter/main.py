@@ -85,11 +85,13 @@ def _s3_client() -> Minio:
     access_key = (
         os.environ.get("S3_ACCESS_KEY")
         or os.environ.get("S3_APP_USER")
+        or os.environ.get("AWS_ACCESS_KEY_ID")  # OpenShell placeholder env in the sandbox
         or "minioadmin"
     )
     secret_key = (
         os.environ.get("S3_SECRET_KEY")
         or os.environ.get("S3_APP_SECRET")
+        or os.environ.get("AWS_SECRET_ACCESS_KEY")  # OpenShell placeholder env in the sandbox
         or "minioadmin"
     )
     return Minio(

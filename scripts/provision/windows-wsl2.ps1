@@ -60,7 +60,7 @@ function Upsert-SectionKeys {
     if ($idx -lt 0) { $Lines.Add("[$Section]"); foreach ($k in $Keys) { $Lines.Add($k) }; return }
     $Lines.InsertRange($idx + 1, $Keys)
 }
-Upsert-SectionKeys $out "wsl2" @("memory=${capGb}GB", "processors=$procs", "swap=8GB")
+Upsert-SectionKeys $out "wsl2" @("memory=${capGb}GB", "processors=$procs", "swap=8GB", "localhostForwarding=true")
 Upsert-SectionKeys $out "experimental" @("autoMemoryReclaim=gradual")
 Set-Content -Path $wslconfigPath -Value $out -Encoding ASCII
 Write-Log "wrote $wslconfigPath ([wsl2] memory=${capGb}GB processors=$procs swap=8GB; [experimental] autoMemoryReclaim=gradual)"
