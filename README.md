@@ -6,6 +6,7 @@
 ![Next.js](https://img.shields.io/badge/Next.js-16-00000?logo=next.js)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)
 [![Docker](https://img.shields.io/badge/docker-compose-2496ED?logo=docker)](docker-compose.yml)
+[![Docs](https://img.shields.io/badge/docs-Material%20for%20MkDocs-526CDE?logo=mkdocs)](https://kameshsampath.github.io/smart-crowd-counter/)
 
 Upload conference session photos and get estimates of attendee count, raised
 hands, and a caption for each photo. Everything runs on your own machine: a
@@ -37,25 +38,16 @@ the VM): `docker compose up --build -d`, then
 
 ## Documentation
 
-Full docs are built with [MkDocs Material](https://squidfunk.github.io/mkdocs-material/)
-from `mkdocs.yaml` and `docs/`:
+Full docs are published at <https://kameshsampath.github.io/smart-crowd-counter/>
+([MkDocs Material](https://squidfunk.github.io/mkdocs-material/), built from
+`mkdocs.yaml` + `docs/` and deployed by CI on push to `main`).
+
+Preview the local site at <http://127.0.0.1:8080>:
 
 ```sh
 uv sync --project docs
-uv run --project docs mkdocs serve -a 127.0.0.1:8080   # http://127.0.0.1:8080
+uv run --project docs mkdocs serve -a 127.0.0.1:8080
 ```
-
-| Topic | Page |
-|---|---|
-| Quickstart (launcher scripts, verify) | [docs/quickstart.md](docs/quickstart.md) |
-| Tools, prerequisites, environment variables | [docs/setup.md](docs/setup.md) |
-| Run with Docker | [docs/docker.md](docs/docker.md) |
-| Architecture and data flow | [docs/architecture.md](docs/architecture.md) |
-| Running the demo (upload, dashboard, GPS map) | [docs/demo.md](docs/demo.md) |
-| HTTP API (web app + agent) | [docs/api.md](docs/api.md) |
-| Buckets, object metadata, analysis cache | [docs/storage.md](docs/storage.md) |
-| Governed agent with NVIDIA OpenShell | [docs/openshell.md](docs/openshell.md), [docs/governed-agent.md](docs/governed-agent.md) |
-| Troubleshooting, costs and limits | [docs/troubleshooting.md](docs/troubleshooting.md) |
 
 ## Verify
 

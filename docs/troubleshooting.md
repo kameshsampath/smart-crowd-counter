@@ -17,9 +17,11 @@ never silent.
 ## "Some photos could not be analyzed"
 
 `GET /api/images` returns this warning when the agent call fails — the local
-inference server may be busy or offline. Check http://localhost:8000/health
-and `ollama ps`, then retry shortly. Results are cached, so retries are free
-once a call succeeds.
+inference server may be busy or offline.
+
+!!! tip "Check the agent and Ollama"
+    Check http://localhost:8000/health and run `ollama ps`, then retry
+    shortly. Results are cached, so retries are free once a call succeeds.
 
 ## First analysis is slow
 
@@ -46,8 +48,11 @@ at community MinIO or any S3-compatible store; the app only uses the S3 API.
 ## Port conflicts
 
 The stack binds 3000 (web), 8000 (agent), 9000/9001 (AIStor), and 11434
-(Ollama). The docs preview defaults to port 8000 too — when the app is
-running, use `mkdocs serve -a 127.0.0.1:8080` instead.
+(Ollama).
+
+!!! tip "Docs preview port"
+    The docs preview defaults to port 8000 too — when the app is running, use
+    `uv run --project docs mkdocs serve -a 127.0.0.1:8080` instead.
 
 ## Reset failed partway
 
@@ -57,10 +62,11 @@ before starting a new reset.
 
 ## Counts look wrong
 
-Counts are AI estimates, not attendance records. Totals across photos are not
-unique attendees, and the hands-up percentage is not a general engagement
-metric. Open vision models count crowds less accurately than frontier hosted
-models — treat estimates as rough.
+!!! warning "Estimates, not records"
+    Counts are AI estimates, not attendance records. Totals across photos are
+    not unique attendees, and the hands-up percentage is not a general
+    engagement metric. Open vision models count crowds less accurately than
+    frontier hosted models — treat estimates as rough.
 
 ## Costs and limits
 

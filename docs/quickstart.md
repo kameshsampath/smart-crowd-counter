@@ -32,13 +32,19 @@ the MinIO server and client into `.bin/`, create the `snaps` and `analysis`
 buckets, create the scoped `crowd-counter` service user, and start the ADK
 agent and the Next.js app.
 
+!!! note "First run"
+    On the first run the launcher copies `.env.example` to `.env` — edit
+    `.env` afterwards to change any setting. See
+    [Environment Setup](setup.md#configuration) for every variable.
+
 Open http://localhost:3000 and upload a photo.
 
-To run the agent inside an NVIDIA OpenShell sandbox instead (policy-as-code,
-placeholder credentials, deny evidence), use the additive governed path:
-`AGENT_MODEL=qwen2.5vl:3b scripts/dev-governed.sh` — see
-[Governed mode](architecture.md#governed-mode-openshell) and the
-[demo walkthrough](governed-agent.md).
+!!! tip "Sandboxed agent (optional)"
+    To run the agent inside an NVIDIA OpenShell sandbox instead
+    (policy-as-code, placeholder credentials, deny evidence), use the
+    additive governed path: `AGENT_MODEL=qwen2.5vl:3b scripts/dev-governed.sh`.
+    See [Governed mode](architecture.md#governed-mode-openshell) and the
+    [demo walkthrough](governed-agent.md).
 
 ## Verify
 
@@ -48,8 +54,11 @@ npm run build
 ```
 
 After the stack is up, check that the homepage, `/api/file-count`, and a static
-asset return HTTP 200. Then upload and analyze a real conference photo. First
-analysis can take tens of seconds on local hardware.
+asset return HTTP 200. Then upload and analyze a real conference photo.
+
+!!! tip "First analysis is slow"
+    The first analysis of a photo can take tens of seconds on local hardware —
+    inference is local. Results are cached, so repeat views are free.
 
 | Service | URL |
 |---|---|

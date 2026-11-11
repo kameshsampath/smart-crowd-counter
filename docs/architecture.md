@@ -49,9 +49,12 @@ One vision-model call per photo asks for JSON:
 `{ total_attendees, raised_hands, percentage_with_hands_up, caption }`.
 The agent fetches the photo from `snaps`, downscales an in-memory copy
 (<= `MAX_INFERENCE_DIMENSION`, default 1280 px) to fit the Ollama context
-window, and prompts the model. Results are stamped onto the photo's S3
-metadata/tags and cached as `<photo>.json` in the `analysis` bucket, so
-analyzed photos are never sent to the model again.
+window, and prompts the model.
+
+!!! note "Cached after the first analysis"
+    Results are stamped onto the photo's S3 metadata/tags and cached as
+    `<photo>.json` in the `analysis` bucket, so analyzed photos are never
+    sent to the model again.
 
 ## Conventions
 
@@ -62,12 +65,14 @@ analyzed photos are never sent to the model again.
 
 ## Governed mode (OpenShell)
 
-By default the agent runs as a plain local process with real S3 credentials in
-its environment — fine for a demo, not fine when the agent is an LLM that reads
-files and makes network calls. [NVIDIA OpenShell](https://github.com/NVIDIA/OpenShell)
-puts the agent in a sandbox with policy-as-code: default-deny network egress,
-Landlock filesystem allowlists, a non-root identity, and credentials that never
-reach the workload.
+!!! warning "Default mode holds real credentials"
+    By default the agent runs as a plain local process with real S3
+    credentials in its environment — fine for a demo, not fine when the agent
+    is an LLM that reads files and makes network calls.
+
+[NVIDIA OpenShell](https://github.com/NVIDIA/OpenShell) puts the agent in a
+sandbox with policy-as-code: default-deny network egress, Landlock filesystem
+allowlists, a non-root identity, and credentials that never reach the workload.
 
 Run it with `scripts/dev-governed.sh` (see the
 [demo walkthrough](governed-agent.md) and [design notes](openshell.md)). On
@@ -78,23 +83,22 @@ and the sandboxed agent.
 
 ```mermaid
 flowchart LR
-    subgraph WIN["Windows host (native)"]
+    subgraph HOST["Windows host (native)"]
+        direction LR
         B["Browser"] --> W["Next.js :3000"]
         M["MinIO AIStor :9000"]
         O["Ollama CUDA :11434"]
     end
-    subgraph WSL["WSL2 distro 'smart-crowd-counter'"]
-        GW["OpenShell gateway"]
+    subgraph DISTRO["WSL2 distro 'smart-crowd-counter' — OpenShell boundary"]
+        direction LR
+        GW["OpenShell gateway<br/>policy + providers + OCSF logs"]
         POD["rootless Podman"]
-        subgraph SB["OpenShell sandbox — policy-as-code"]
-            A["ADK agent<br/>env: placeholders only"]
-        end
+        A["ADK agent :8000<br/>env: placeholders only"]
+        GW --> POD --> A
     end
-    W -->|"POST /analyze"| A
+    W -->|"POST /analyze {path}"| A
     A -->|"host.openshell.internal:11434"| O
-    A -->|"host.openshell.internal:9000<br/>SigV4 signed gateway-side"| M
-    GW -.->|"policy + providers + OCSF logs"| SB
-    POD -.->|"runs the boundary"| SB
+    A -->|"host.openshell.internal:9000<br/>SigV4 re-signed gateway-side"| M
 ```
 
 Before/after trust story:

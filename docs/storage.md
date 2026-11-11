@@ -7,6 +7,10 @@
 | `snaps` (configurable via `S3_PHOTOS_BUCKET`) | Uploaded photos. EXIF GPS is stored as S3 object metadata at upload time — no sidecar database. |
 | `analysis` (configurable via `S3_RESULTS_BUCKET`) | Cached analysis JSON per photo, keyed by photo path (`<photo>.json`). |
 
+!!! note "GPS lives in object metadata"
+    EXIF GPS is stored as S3 object metadata at upload time — there is no
+    sidecar database.
+
 ## Access control
 
 In Docker Compose, the `aistor-init` job provisions both buckets and a scoped
@@ -29,6 +33,9 @@ local/snaps/<photo>` prints the same:
 ## Reset semantics
 
 Reset removes both the photo from `snaps` and its cached `<photo>.json` from
-`analysis`. The analysis-cache removal is best-effort, so a failed delete can
-leave an orphan JSON in `analysis`; the app never shows it, because the photo
-list comes from `snaps`.
+`analysis`.
+
+!!! note "Orphan cache entries"
+    The analysis-cache removal is best-effort, so a failed delete can leave an
+    orphan JSON in `analysis`. The app never shows it, because the photo list
+    comes from `snaps`.

@@ -22,11 +22,12 @@ implementation commits are reviewed against it.
 
 ## 1. Platform model — NATIVE WINDOWS + WSL2 COMBO
 
-> The Windows demo is a **native Windows + WSL2 combo**. The **Windows host**
-> runs Ollama (CUDA), MinIO AIStor, and the Next.js app natively. The **WSL2
-> distro** runs **only** the OpenShell gateway, rootless headless Podman, and
-> the sandboxed agent. Ollama is never run inside WSL2 — model weights live in
-> VRAM on the Windows host.
+!!! note "Native Windows + WSL2 combo"
+    The Windows demo is a **native Windows + WSL2 combo**. The **Windows host**
+    runs Ollama (CUDA), MinIO AIStor, and the Next.js app natively. The **WSL2
+    distro** runs **only** the OpenShell gateway, rootless headless Podman, and
+    the sandboxed agent. Ollama is never run inside WSL2 — model weights live in
+    VRAM on the Windows host.
 
 The WSL2 project distro is imported from a golden tar with the **project
 name** as the distro name (`wsl --import smart-crowd-counter <golden.tar>`),
@@ -81,25 +82,22 @@ artifact).
 
 ```mermaid
 flowchart LR
-  subgraph WIN["Windows host (native)"]
-    BROWSER["Browser"]
-    NEXT["Next.js :3000"]
+  subgraph HOST["Windows host (native)"]
+    direction LR
+    BROWSER["Browser"] --> NEXT["Next.js :3000"]
     AISTOR["MinIO AIStor :9000"]
     OLLAMA["Ollama CUDA :11434"]
   end
-  subgraph WSL["WSL2 distro 'smart-crowd-counter' (from golden tar)"]
-    GW["OpenShell gateway"]
+  subgraph DISTRO["WSL2 distro 'smart-crowd-counter' (from golden tar) — OpenShell boundary"]
+    direction LR
+    GW["OpenShell gateway<br/>policy + providers + OCSF logs"]
     POD["rootless Podman"]
-    subgraph SB["OpenShell sandbox — policy-as-code"]
-      AGENT["ADK agent :8000<br/>env holds placeholders only"]
-    end
+    AGENT["ADK agent :8000<br/>env holds placeholders only"]
+    GW --> POD --> AGENT
   end
-  BROWSER --> NEXT
-  NEXT -->|"POST /analyze {path} (localhost:8000)"| AGENT
+  NEXT -->|"POST /analyze {path}"| AGENT
   AGENT -->|"host.openshell.internal:11434"| OLLAMA
   AGENT -->|"host.openshell.internal:9000 — SigV4 signed gateway-side"| AISTOR
-  GW -. "policy + providers + logs" .-> SB
-  POD -. "runs the boundary" .-> SB
 ```
 
 ## 5. Resource budget
@@ -127,14 +125,12 @@ Footprint targets: `vmmem` < ~3 GB after 10 min idle; `vmmem` < 4 GB during an
 analysis run. Ollama weights live in VRAM (~5.5 / 8 GB) — never run Ollama
 inside WSL2.
 
-## 6. Corrections vs. bounded-boxer
+## 6. Corrections vs. past mistakes
 
-[bounded-boxer](https://github.com/kameshsampath/bounded-boxer) (checked @
-`b1d9f7505a8017eeb7e9754ac722baae8848943b`) is the past-mistakes reference.
-This integration corrects it as follows:
+The following mistakes from the earlier design were identified and corrected:
 
-| bounded-boxer did | Why it is wrong | Here |
-| ----------------- | --------------- | ---- |
+| Past mistake | Why it is wrong | Here |
+| ------------ | --------------- | ---- |
 | `masked_paths`, `default_egress`, `no_new_privileges` in `2-governed/policy.yaml` | None of these exist in the OpenShell policy schema (verified absent from NVIDIA/OpenShell @ `f1ce693`; the schema lists only `version`, `filesystem_policy`, `landlock`, `process`, `network_policies`, `network_middlewares`). Unknown fields are rejected by the gateway; default-deny egress and seccomp are implicit. | Policy YAML uses only the six schema fields; commit 8 adds a CI allowlist test generated from the schema so an invented field fails CI. |
 | Hand-rolled `bwrap` launcher (`scripts/sandbox.sh`) | Isolation must come only from an OpenShell-supported runtime. | Rootless headless Podman driver (`compute_driver = "podman"`); Docker Desktop documented as a supported alternative only. |
 | `127.0.0.1:11434` endpoint and `localhost` targets in `2-governed/policy.yaml` / `run.sh` | Network policy never authorizes loopback. | All host-local services via `host.openshell.internal`. |
@@ -248,7 +244,7 @@ How the claims above were verified (anti-hallucination protocol from the IDD):
    zero hits in NVIDIA/OpenShell; `filesystem_policy`, `network_middlewares`,
    `run_as_user`, `host.openshell.internal`, `credential_signing`, and
    `"ollama-openai"` all confirmed.
-4. bounded-boxer mistakes confirmed in its source @ `b1d9f750` (§6).
+4. The mistakes in §6 were confirmed against the earlier design's source (§6).
 5. Runtime probes on the demo host (2026-11-11, WSL2 Ubuntu 26.04, kernel
    6.6.87.2-microsoft-standard-WSL2): `openshell --version` → `openshell 0.1.8`;
    Landlock ABI probe `landlock_create_ruleset(NULL, 0, VERSION=1)` → **3**;

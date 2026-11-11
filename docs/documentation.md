@@ -1,5 +1,9 @@
 # Building These Docs
 
+!!! note "Not part of the published site"
+    This page is excluded from the built site (`exclude_docs` in `mkdocs.yaml`)
+    and kept in the repo for contributors working on the docs.
+
 The docs are a [MkDocs](https://www.mkdocs.org/) site using the
 [Material for MkDocs](https://squidfunk.github.io/mkdocs-material/) theme.
 Configuration lives in `mkdocs.yaml` at the repo root; pages live in `docs/`.

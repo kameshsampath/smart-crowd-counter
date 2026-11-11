@@ -13,13 +13,10 @@ local Ollama endpoint, read ONLY the filesystem paths it needs, and never
 hold real S3 credentials in its environment. The existing Windows/dev.sh flow
 remains untouched — the governed path is additive and opt-in. This is a
 private-AI security demonstration (policy-as-code, evidence of denies, correct
-OpenShell architecture) and the corrected sequel to
-[bounded-boxer](https://github.com/kameshsampath/bounded-boxer) in the IDD
-blog series.
+OpenShell architecture).
 
 ## Hard constraints
 
-Past-mistakes reference: https://github.com/kameshsampath/bounded-boxer
 Schema truth: https://docs.nvidia.com/openshell/latest/how-it-works/policies/schema
 
 1. Sandbox policy YAML uses ONLY: `version`, `filesystem_policy`
@@ -45,8 +42,8 @@ Schema truth: https://docs.nvidia.com/openshell/latest/how-it-works/policies/sch
 6. Every profile is linted (`openshell profile lint`) before import; the CI
    schema test is generated FROM the schema reference as an allowed-fields
    ALLOWLIST — a field is legal only if the schema lists it, so an
-   invented-but-plausible field fails the test (the bounded-boxer regression
-   must be impossible to ship).
+   invented-but-plausible field fails the test (such a regression must be
+   impossible to ship).
 7. Isolation comes ONLY from an OpenShell-supported runtime: rootless headless
    Podman. NO bwrap, no hand-rolled launchers. Docker Desktop is documented as
    a supported alternative only (not the demo path).
@@ -111,8 +108,8 @@ VMs, no public endpoints, no tunnels.
 ## Commit plan — IN ORDER, one atomic commit each, stack works after every commit
 
 1. `docs: OpenShell integration design notes` — docs/openshell.md: architecture
-   mapping (gateway/provider/policy → agent/Ollama/AIStor), bounded-boxer
-   corrections table, NATIVE WINDOWS + WSL2 COMBO callout, component × platform
+   mapping (gateway/provider/policy → agent/Ollama/AIStor), corrections
+   table, NATIVE WINDOWS + WSL2 COMBO callout, component × platform
    matrix, topology + resource budget, AND an "Authoritative OpenShell
    references" appendix with canonical NVIDIA doc links grouped by concern
    (concepts, policies, providers, sandboxes/runtimes, gateways,

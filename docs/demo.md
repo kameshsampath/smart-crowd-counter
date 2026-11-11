@@ -4,9 +4,11 @@
 
 Open http://localhost:3000 and upload JPG, JPEG, or PNG photos — up to 4 at a
 time, 3.75 MB and 8000 x 8000 px each. Oversized photos are rejected in the
-browser before upload. The first analysis of a photo can take tens of seconds
-on local hardware; afterwards results come from the cache and repeat views
-are free.
+browser before upload.
+
+!!! tip "First analysis is slow"
+    The first analysis of a photo can take tens of seconds on local hardware;
+    afterwards results come from the cache and repeat views are free.
 
 The dashboard shows per-photo attendee and raised-hand estimates and captions,
 a hands-up donut chart, and light and dark themes. The session map plots GPS
@@ -14,25 +16,32 @@ pins from EXIF and links each pin back to its source photo.
 
 ## GPS and the session map
 
-Map pins come from EXIF GPS in the photo. Converting HEIC to JPG often drops
-the location. Many converters strip EXIF, and iPhone Share > Options >
-Location: off removes it on purpose. Check a file directly:
+Map pins come from EXIF GPS in the photo.
+
+!!! warning "Location can be stripped"
+    Converting HEIC to JPG often drops the location. Many converters strip
+    EXIF, and iPhone Share > Options > Location: off removes it on purpose.
+
+Check a file directly:
 
 ```sh
 node scripts/check-gps.mjs path/to/photo.jpg
 ```
 
-If `gps` is `null`, re-export the photo with location included. Uploads also
-return a warning ("N of M photos had no GPS location..."), so missing pins
-are never silent.
+If `gps` is `null`, re-export the photo with location included.
+
+!!! note "Missing pins are never silent"
+    Uploads return a warning ("N of M photos had no GPS location...") whenever
+    a photo has no GPS.
 
 ## Resetting the library
 
-This is a shared demo: all app users see the same photo library, and a
-confirmed reset (`CLEAR ALL PHOTOS`) deletes it for everyone. A retry token
-protects cleanup against partial failures — if a reset fails partway, retry
-with the returned `retryToken` before starting a new one. Restrict access
-before use.
+!!! warning "Shared demo library"
+    All app users see the same photo library, and a confirmed reset
+    (`CLEAR ALL PHOTOS`) deletes it for everyone. Restrict access before use.
+
+A retry token protects cleanup against partial failures — if a reset fails
+partway, retry with the returned `retryToken` before starting a new one.
 
 ## Verify
 

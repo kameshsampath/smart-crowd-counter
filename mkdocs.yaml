@@ -11,13 +11,27 @@ exclude_docs: |
   requirements.txt
   pyproject.toml
   .venv/
+  documentation.md
 extra_css:
   - stylesheets/extra.css
+extra_javascript:
+  - javascripts/extra.js
 theme:
   name: material
   palette:
-    primary: white
-  font: false
+    - scheme: default
+      primary: white
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: white
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  font:
+    text: Roboto
+    code: Roboto Mono
   features:
     - content.code.copy
     - content.code.select
@@ -31,7 +45,6 @@ nav:
   - "Overview": index.md
   - "Quickstart": quickstart.md
   - "Environment Setup": setup.md
-  - "Run with Docker": docker.md
   - "Architecture": architecture.md
   - "Running the Demo": demo.md
   - "API Reference": api.md
@@ -41,7 +54,8 @@ nav:
       - "Demo Walkthrough": governed-agent.md
       - "Security Intent (IDD)": idd/part-1-openshell-security.idd.md
   - "Troubleshooting": troubleshooting.md
-  - "Building These Docs": documentation.md
+  - "References": references.md
+  - "Run with Docker": docker.md
 markdown_extensions:
   - toc:
       baselevel: 1

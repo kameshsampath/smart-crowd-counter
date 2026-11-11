@@ -1,17 +1,18 @@
 # Run with Docker
 
-Use Docker only if you can give Docker 16 GB of RAM. On Windows, use Docker
-Desktop with the WSL2 backend and set the VM memory in
-`%USERPROFILE%\.wslconfig`:
+!!! warning "Docker needs 16 GB of RAM"
+    Use Docker only if you can give Docker 16 GB of RAM. On Windows, use
+    Docker Desktop with the WSL2 backend and set the VM memory in
+    `%USERPROFILE%\.wslconfig`:
 
-```ini
-[wsl2]
-memory=16GB
-processors=8
-autoMemoryReclaim=gradual
-```
+    ```ini
+    [wsl2]
+    memory=16GB
+    processors=8
+    autoMemoryReclaim=gradual
+    ```
 
-Then run `wsl --shutdown` to apply. Defaults are fine on Linux and macOS.
+    Then run `wsl --shutdown` to apply. Defaults are fine on Linux and macOS.
 
 ```sh
 git clone https://github.com/kameshsampath/smart-crowd-counter.git
@@ -36,10 +37,13 @@ docker compose exec ollama ollama pull qwen2.5vl:7b   # once, ~5 GB
 
 ## Using Ollama on the host
 
-To run Ollama on the host instead of in a container (saves RAM), set
-`COMPOSE_OLLAMA_URL=http://host.docker.internal:11434` in `.env`. The agent
-resolves `host.docker.internal` through the `host-gateway` mapping (built in
-on Windows and macOS, declared for Linux in `docker-compose.yml`).
+!!! tip "Save RAM: run Ollama on the host"
+    To run Ollama on the host instead of in a container, set
+    `COMPOSE_OLLAMA_URL=http://host.docker.internal:11434` in `.env`. The
+    agent resolves `host.docker.internal` through the `host-gateway` mapping
+    (built in on Windows and macOS, declared for Linux in
+    `docker-compose.yml`).
 
-No AIStor license yet? Point `S3_ENDPOINT` at any S3-compatible store, for
-example community MinIO. The app only uses the S3 API.
+!!! note "No AIStor license?"
+    Point `S3_ENDPOINT` at any S3-compatible store, for example community
+    MinIO. The app only uses the S3 API.

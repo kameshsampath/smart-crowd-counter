@@ -28,9 +28,13 @@
 }
 ```
 
-`attendees`, `hands`, `percentage`, and `caption` are `null` until the photo
-has been analyzed. `latitude`/`longitude` are `null` when the photo has no
-EXIF GPS.
+!!! note "Analysis fields start as null"
+    `attendees`, `hands`, `percentage`, and `caption` are `null` until the
+    photo has been analyzed. `latitude`/`longitude` are `null` when the photo
+    has no EXIF GPS.
+
+`GET /api/images` is long-running on first sight of a photo (it calls the
+agent), then served from the cache.
 
 ## Agent (FastAPI, http://localhost:8000)
 
@@ -39,5 +43,6 @@ EXIF GPS.
 | `GET /health` | Returns `{ "status": "ok", "model": ..., "ollama": ... }`. |
 | `POST /analyze` | Accepts `{ "path": "photo.jpg" }` (optionally `"image_base64"`). Returns `{ "total_attendees", "raised_hands", "percentage_with_hands_up", "caption" }`. |
 
-The web app calls `POST /analyze` only for photos without a cached result in
-the `analysis` bucket.
+!!! note "Cache-first"
+    The web app calls `POST /analyze` only for photos without a cached result
+    in the `analysis` bucket.

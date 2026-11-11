@@ -18,19 +18,21 @@ ollama pull qwen2.5vl:7b   # default (AGENT_MODEL), ~5 GB
 ollama pull qwen2.5vl:3b   # low-RAM fallback, ~3.5 GB
 ```
 
-GPU: AIStor does not use a GPU. Object storage is CPU and I/O bound, so a GPU
-machine gains nothing there. The GPU matters for Ollama. When Ollama runs on
-the host (the launcher scripts), its native Windows, Linux, and macOS builds
-use an NVIDIA GPU (CUDA) or Apple Metal automatically; run `ollama ps` to see
-the GPU share. In Docker, enable GPU access in Docker Desktop (WSL2 backend)
-and uncomment the `deploy.resources.reservations` block on the `ollama`
-service in `docker-compose.yml`.
+!!! note "Where the GPU matters"
+    AIStor does not use a GPU. Object storage is CPU and I/O bound, so a GPU
+    machine gains nothing there. The GPU matters for Ollama. When Ollama runs
+    on the host (the launcher scripts), its native Windows, Linux, and macOS
+    builds use an NVIDIA GPU (CUDA) or Apple Metal automatically; run
+    `ollama ps` to see the GPU share. In Docker, enable GPU access in Docker
+    Desktop (WSL2 backend) and uncomment the `deploy.resources.reservations`
+    block on the `ollama` service in `docker-compose.yml`.
 
 ## Configuration
 
-Configuration comes from plain environment variables; the app never reads
-credential files. On first run the launcher scripts copy `.env.example` to
-`.env` — edit `.env` to change anything.
+!!! note "Environment variables only"
+    Configuration comes from plain environment variables; the app never reads
+    credential files. On first run the launcher scripts copy `.env.example`
+    to `.env` — edit `.env` to change anything.
 
 | Variable | Default | Purpose |
 |---|---|---|
@@ -63,5 +65,6 @@ If you prefer to start each service yourself:
 4. Start the web app: `npm ci && npm run dev` with `S3_ENDPOINT`,
    `S3_ACCESS_KEY`, `S3_SECRET_KEY`, and `AGENT_URL` set. See `.env.example`.
 
-No AIStor license yet? Point `S3_ENDPOINT` at any S3-compatible store, for
-example community MinIO. The app only uses the S3 API.
+!!! tip "No AIStor license?"
+    Point `S3_ENDPOINT` at any S3-compatible store, for example community
+    MinIO. The app only uses the S3 API.
