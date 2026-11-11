@@ -195,3 +195,19 @@ VMs, no public endpoints, no tunnels.
 - README covers the combo topology, platform matrix, why, and applications
   with the inbox roadmap teaser.
 - No secret values in repo files, logs, or docs.
+
+## Parked for next iteration (recorded decision, out of Part 1 scope)
+
+The agent is the ONLY LLM boundary. All model calls stay inside the governed
+agent; the web app's contract remains `POST /analyze {path}` — it never sends
+prompts and never calls LLMs or model-serving endpoints directly.
+
+Next-iteration upgrade (after Part 1): make the analysis agent tool-using.
+Storage operations (get_photo, read_photo_metadata, save_analysis, list_photos)
+are exposed as an MCP server; the ADK agent consumes it as an MCP client, so
+tools plug in and out behind the agent boundary without any UI/API change, and
+OpenShell's `protocol: mcp` network policy governs individual `tools/call`
+invocations by tool name. The inbox feature (Part 1b) builds on this
+tool-using agent with a watch trigger. Next.js does NOT call the MCP server
+for LLM-related work; deterministic housekeeping, if ever needed, is a
+separate explicit decision.
